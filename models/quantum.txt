@@ -1,0 +1,74 @@
+typedef R+ : float r
+    r >= 0.
+
+typedef I+ : int i
+    i >= 0
+
+typedef R1+ : float r
+    r >= 1.
+
+typedef I1+ : int i
+    i >= 1
+
+typedef Epsilon : float r
+    r <= 0.01
+
+typedef Prob : float f
+    f >= 0.
+    f <= 1.
+
+define Volumn:
+    N_iteration : I+
+    V_distill : R+
+    C_network : R+
+    Volumn : R+
+    Volumn = N_iteration * V_distill * (1 + C_network)
+
+define N_iteration:
+    T_peak : I+
+    K_prime : R+
+    D[] : I+
+    N_iteration : I+
+    N_iteration = Sum(floor(t / K_prime + 1) * D[t], (t, 0, T_peak))
+
+define K_prime:
+    K : R1+
+    l : I+
+    epsilon_inject : Epsilon as e
+    K_prime : R+
+    K_prime = K * Product((1-3*K**(1/l)+8) * (1+3*K**(1/l))**(2*r-1) * e**(2*r), (r, 1, l))
+
+define V_distill:
+    K : R1+
+    l : I+
+    d : R+
+    V_distill : R+
+    V_distill = (6*K**(1/l) + 16)**l * 12 * d**3 * l
+
+define C_network:
+    T_bar : R+
+    K_prime : R+
+    d : R+
+    l : I+
+    K : R1+
+    C_network : R+
+    C_network = .5 * (T_bar/K_prime - 1) * (T_bar/K_prime) + (7*d + 15)/(24*d*l) * (Min(T_bar,K)/2)**.5
+
+define surface_code:
+    P_success : Prob as p
+    N_total : I+ as n
+    d : R+
+    epsilon_in : Epsilon as e
+    p / n = d * (100 * e) ** ((d+1)/2)
+
+assume K_prime, V_distill, C_network, N_iteration, surface_code, Volumn
+let K = 20.006179633254817
+let l = 2
+let T_bar = 21.
+let N_total = 3 * 10 ** 6
+let epsilon_in = 10 ** -3
+let epsilon_inject = 0.4 * epsilon_in
+let P_success = .9
+let T_peak = 100
+let D[] = File(/home/weilong/Downloads/isingsamples)
+explore Volumn, K_prime, N_iteration

@@ -1,0 +1,54 @@
+### Assumptions ###
+# area: m^2,  energy: J
+
+typedef R+ : float r
+	r > 0
+
+typedef I+ : int i
+	i > 0
+
+define transistor_area_model:
+	tech_node : R+
+	transistor_scale_factor : R+ as t_scale
+	transistor_area : R+ as t_area
+	transistors_per_junction : I+ as t_per_junction
+	junction_size : R+ 
+	t_area =  (t_scale**2) * (tech_node**2)
+	junction_size = t_area*t_per_junction
+
+define xbar_area_model:
+	num_of_columns : I+ as n_cols
+	num_of_rows : I+ as n_rows
+	junction_size : R+
+	area : R+
+	area = n_cols*n_rows*junction_size
+
+define xbar_wires_energy_model:
+        num_of_columns : I+ as n_cols
+        num_of_rows : I+ as n_rows
+	junction_size : R+	
+	avg_vertical_distance : R+ as v_dist
+	avg_horizontal_distance : R+ as h_dist
+	capacitance_per_unit : R+ as c
+	wires_energy : R+
+	v_dist = n_rows*junction_size/2
+	h_dist = n_cols*junction_size/2
+	wires_energy = (v_dist*n_cols + h_dist*n_rows) * c 
+	
+assume transistor_area_model, xbar_area_model, xbar_wires_energy_model
+ 
+# capacitance per unit length = 3 pF/cm = 3*10^(-10) F/m 
+let capacitance_per_unit = 3 * 10**(-10)
+
+# ref: http://www.springer.com/gp/book/978079238460, https://ieeexplore.ieee.org/document/8320535/
+let transistor_scale_factor = 5
+
+# CMOS tech node = 90 nm = 90*10^(-9) m
+let tech_node = 90 * 10**(-9)
+
+# assume a square 100x100 crossbar. assuming 1-t per junction
+let num_of_columns = 100
+let num_of_rows = 100
+let transistors_per_junction = 1
+
+explore area, wires_energy

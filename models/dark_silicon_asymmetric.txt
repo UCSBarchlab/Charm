@@ -1,0 +1,101 @@
+typedef I+ : int i
+    i > 0
+
+typedef R+ : float r
+    r > 0
+
+typedef Fraction : float f
+    f >= 0
+    f <= 1
+
+define core_area_scale:
+    ref_big_core_area : R+ as a1b
+    ref_small_core_area : R+ as a1s
+    big_core_area : R+ as a2b
+    small_core_area : R+ as a2s
+    ref_tech_node : I+ as t1
+    tech_node : I+ as t2
+    a1b / (t1 ** 2) = a2b / (t2 ** 2) 
+    a1s / (t1 ** 2) = a2s / (t2 ** 2) 
+
+define perf_scale:
+    ref_big_core_performance : I+ as bperf
+    big_core_performance : R+ as new_bperf
+    ref_small_core_performance : I+ as sperf
+    small_core_performance : R+ as new_sperf
+    tech_node : I+ as t
+    perf_scale_factor : R+ as a
+    a = Piecewise((1., t=45), (1.09, t=32), (2.38, t=22), (3.21, t=16), (4.17, t=11), (3.85, t=8))
+    new_bperf = a * bperf
+    new_sperf = a * sperf
+
+define power_scale:
+    ref_big_core_power : R+ as bpower
+    big_core_power : R+ as new_bpower
+    ref_small_core_power : R+ as spower
+    small_core_power : R+ as new_spower
+    power_scale_factor : R+ as a
+    tech_node : I+ as t
+    a = Piecewise((1., t=45), (0.66, t=32), (0.54, t=22), (0.38, t=16), (0.25, t=11), (0.12, t=8))
+    new_bpower = a * bpower
+    new_spower = a * spower
+
+define perf2area_45nm:
+    ref_big_core_performance : I+ as bperf
+    ref_big_core_area : R+ as ba
+    ref_small_core_performance : I+ as sperf
+    ref_small_core_area : R+ as sa
+    ba = 0.0152 * bperf ** 2 + 0.0265 * bperf + 7.4393
+    sa = 0.0152 * sperf ** 2 + 0.0265 * sperf + 7.4393
+
+define perf2power_45nm:
+    ref_big_core_performance : I+ as bperf
+    ref_big_core_power : R+ as bpower
+    ref_small_core_performance : I+ as sperf
+    ref_small_core_power : R+ as spower
+    bpower = 0.0002 * bperf ** 3 + 0.0009 * bperf ** 2 + 0.3859 * bperf - 0.0301
+    spower = 0.0002 * sperf ** 3 + 0.0009 * sperf ** 2 + 0.3859 * sperf - 0.0301
+
+define amdahl_law:
+    speedup : R+ as sp
+    serial_execution_time : R+ as st
+    parallel_execution_time : R+ as pt
+    sp = 1 / (st + pt)
+
+define dynamic_cmp:
+    big_core_performance : R+ as big_P
+    small_core_performance : R+ as small_P
+    fraction_parallelism : Fraction as F
+    chip_area : R+ as A
+    big_core_area : R+ as big_a
+    small_core_area : R+ as small_a
+    thermal_design_power : R+ as TDP
+    big_core_power : R+ as big_p
+    small_core_power : R+ as small_p
+    core_num : I+ as N
+    serial_execution_time : R+ as st
+    parallel_execution_time : R+ as pt
+    st = (1 - F)/big_P
+    pt = F / (small_P * N)
+    N = umin(ufloor((A - big_a)/small_a), ufloor((TDP - big_p)/small_p))
+    big_P >= small_P
+
+define dark_silicon_ratio:
+    core_num : I+ as N
+    small_core_area : R+ as a
+    big_core_area : R+ as ba
+    chip_area : R+ as A
+    dark_ratio : Fraction as D
+    D = 1 - (ba + N * a) / A
+
+assume amdahl_law, dark_silicon_ratio, dynamic_cmp, perf2area_45nm, perf2power_45nm, perf_scale, power_scale, core_area_scale
+let chip_area = 111.0
+let thermal_design_power = 125.0
+let ref_tech_node = 45
+let ref_big_core_performance = range(1, 50, 1)
+let ref_small_core_performance = range(1, 50, 1)
+let fraction_parallelism = [1., 0.999, 0.99,0.97, 0.95,  0.9, 0.8, 0.5, 0.]
+#let sigma = 1.
+#let (tech_node, perf_scale_factor, power_scale_factor) = [(45, 1., 1.), (32, Gauss(1.095, sigma * 0.005, 1), Gauss(.685, sigma * 0.025, 0)), (22, Gauss(1.785, sigma * 0.595, 1), Gauss(.53, sigma * .01, 0)), (16, Gauss(2.23, sigma * 0.98, 1), Gauss(0.385, sigma * 0.005, 0)), (11, Gauss(2.735, sigma * 1.435, 1), Gauss(0.27, sigma * 0.02, 0)), (8, Gauss(2.595, sigma * 1.255, 1), Gauss(0.17, sigma * 0.05, 0))]
+let tech_node = [45, 32, 22, 16, 11, 8]
+explore speedup, dark_ratio, core_num
