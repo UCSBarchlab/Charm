@@ -66,7 +66,6 @@ define CNN:
     T_c <= C
 
 given xilinx_xc7vh870t_3, CNN
-#given CNN
 #assume (N, M, R, C, K, S) = [(3, 48, 55, 55, 11, 4), (48, 128, 27, 27, 5, 1)]
 assume (N, M, R, C, K, S) = (48, 128, 27, 27, 5, 1)
 assume (T_r, T_c) = (20, 27)
