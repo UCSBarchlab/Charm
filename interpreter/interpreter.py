@@ -9,7 +9,7 @@ import pickle
 from base.helpers import *
 from collections import defaultdict, deque
 from graph import *
-from models.distributions import Dummy, Gauss
+from base.distributions import Dummy, Gauss
 from smt_wrapper import SMTInstance
 from sympy import simplify
 from sympy.parsing.sympy_parser import parse_expr
