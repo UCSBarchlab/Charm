@@ -50,14 +50,14 @@ define surface_code:
     epsilon_in : R+ as e
     p / n = d * (100 * e) ** ((d+1)/2)
 
-assume K_prime, V_distill, N_iteration, Volumn
-let K = [50, 1]
-let (l, d) = [(2, 14.), (1, 4.)]
-let epsilon_in = Gauss(10 ** -3, .0001, 0)
-#let epsilon_in = Gauss(10 ** -5, .000001, 0)
-#let N_total = 3 * 10 ** 6
-let epsilon_inject = 0.4 * epsilon_in
-let T_peak = 99
-let L_cp = 1
-let D[] = File(/home/weilong/Downloads/Ising_100_hist)
+given K_prime, V_distill, N_iteration, Volumn
+assume K = [50, 1]
+assume (l, d) = [(2, 14.), (1, 4.)]
+assume epsilon_in = Gauss(10 ** -3, .0001, 0)
+#assume epsilon_in = Gauss(10 ** -5, .000001, 0)
+#assume N_total = 3 * 10 ** 6
+assume epsilon_inject = 0.4 * epsilon_in
+assume T_peak = 99
+assume L_cp = 1
+assume D[] = File(/home/weilong/Downloads/Ising_100_hist)
 explore Volumn

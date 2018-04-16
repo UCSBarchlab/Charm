@@ -44,7 +44,7 @@ define adder_model:
     cp = 184 * log(w, 2) + 18.9	   # critical path length of one adder
     clkp = s * (cp + 189 + 194)	   # clock period in ps with set up and hold times
 
-assume adder_model, power_model
-let adder_bitwidth = 16
-let technode = 32
+given adder_model, power_model
+assume adder_bitwidth = 16
+assume technode = 32
 explore adder_period_ps, adder_area, adder_power, adder_energy

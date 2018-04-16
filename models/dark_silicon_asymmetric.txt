@@ -88,14 +88,14 @@ define dark_silicon_ratio:
     dark_ratio : Fraction as D
     D = 1 - (ba + N * a) / A
 
-assume amdahl_law, dark_silicon_ratio, dynamic_cmp, perf2area_45nm, perf2power_45nm, perf_scale, power_scale, core_area_scale
-let chip_area = 111.0
-let thermal_design_power = 125.0
-let ref_tech_node = 45
-let ref_big_core_performance = range(1, 50, 1)
-let ref_small_core_performance = range(1, 50, 1)
-let fraction_parallelism = [1., 0.999, 0.99,0.97, 0.95,  0.9, 0.8, 0.5, 0.]
-#let sigma = 1.
-#let (tech_node, perf_scale_factor, power_scale_factor) = [(45, 1., 1.), (32, Gauss(1.095, sigma * 0.005, 1), Gauss(.685, sigma * 0.025, 0)), (22, Gauss(1.785, sigma * 0.595, 1), Gauss(.53, sigma * .01, 0)), (16, Gauss(2.23, sigma * 0.98, 1), Gauss(0.385, sigma * 0.005, 0)), (11, Gauss(2.735, sigma * 1.435, 1), Gauss(0.27, sigma * 0.02, 0)), (8, Gauss(2.595, sigma * 1.255, 1), Gauss(0.17, sigma * 0.05, 0))]
-let tech_node = [45, 32, 22, 16, 11, 8]
+given amdahl_law, dark_silicon_ratio, dynamic_cmp, perf2area_45nm, perf2power_45nm, perf_scale, power_scale, core_area_scale
+assume chip_area = 111.0
+assume thermal_design_power = 125.0
+assume ref_tech_node = 45
+assume ref_big_core_performance = range(1, 50, 1)
+assume ref_small_core_performance = range(1, 50, 1)
+assume fraction_parallelism = [1., 0.999, 0.99,0.97, 0.95,  0.9, 0.8, 0.5, 0.]
+#assume sigma = 1.
+#assume (tech_node, perf_scale_factor, power_scale_factor) = [(45, 1., 1.), (32, Gauss(1.095, sigma * 0.005, 1), Gauss(.685, sigma * 0.025, 0)), (22, Gauss(1.785, sigma * 0.595, 1), Gauss(.53, sigma * .01, 0)), (16, Gauss(2.23, sigma * 0.98, 1), Gauss(0.385, sigma * 0.005, 0)), (11, Gauss(2.735, sigma * 1.435, 1), Gauss(0.27, sigma * 0.02, 0)), (8, Gauss(2.595, sigma * 1.255, 1), Gauss(0.17, sigma * 0.05, 0))]
+assume tech_node = [45, 32, 22, 16, 11, 8]
 explore speedup, dark_ratio, core_num

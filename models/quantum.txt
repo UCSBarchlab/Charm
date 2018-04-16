@@ -61,14 +61,14 @@ define surface_code:
     epsilon_in : Epsilon as e
     p / n = d * (100 * e) ** ((d+1)/2)
 
-assume K_prime, V_distill, C_network, N_iteration, surface_code, Volumn
-let K = 20.006179633254817
-let l = 2
-let T_bar = 21.
-let N_total = 3 * 10 ** 6
-let epsilon_in = 10 ** -3
-let epsilon_inject = 0.4 * epsilon_in
-let P_success = .9
-let T_peak = 100
-let D[] = File(/home/weilong/Downloads/isingsamples)
+given K_prime, V_distill, C_network, N_iteration, surface_code, Volumn
+assume K = 20.006179633254817
+assume l = 2
+assume T_bar = 21.
+assume N_total = 3 * 10 ** 6
+assume epsilon_in = 10 ** -3
+assume epsilon_inject = 0.4 * epsilon_in
+assume P_success = .9
+assume T_peak = 100
+assume D[] = File(/home/weilong/Downloads/isingsamples)
 explore Volumn, K_prime, N_iteration

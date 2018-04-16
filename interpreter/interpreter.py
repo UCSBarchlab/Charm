@@ -1,3 +1,4 @@
+import functools
 import itertools
 import logging
 import mcerp
@@ -375,6 +376,50 @@ class Interpreter(object):
                 return False
             return _token_splittable(symbol)
 
+        def do_filter(node):
+            def strip_index(toks):
+                indexing = 0
+                func_str = ''
+                for i, t in enumerate(toks):
+                    if t == '[':
+                        indexing = indexing + 1
+                    if not indexing:
+                        func_str = func_str + t
+                    if t == ']':
+                        indexing = indexing - 1
+                return func_str
+            
+            def actual_func(cond_func, func, **kwargs):
+                cond_filter = cond_func(**kwargs)
+                filtered_args = {}
+                for k, v in kwargs.iteritems():
+                    filtered_args[k] = [val for val, cond in zip(v, cond_filter) if cond]
+                return func(**filtered_args)
+
+            assert node.val.scripted
+            start = node.val.toks.index(Names.listCond)
+            end = node.val.toks.index(')', start)
+            cond_toks = node.val.toks[start + 1:end]
+            cond_str = strip_index(cond_toks)
+            func_toks = node.val.toks[:start] + node.val.toks[end:]
+            func_str = strip_index(func_toks)
+
+            syms = {}
+            for name in node.val.names:
+                syms.update(SympyHelper.initSyms(name))
+            cond_exprs = SympyHelper.initExprs([cond_str], syms)
+            func_exprs = SympyHelper.initExprs([func_str], syms)
+            cond_sol = simplify(cond_exprs)[0]
+            func_sol = solve(func_exprs, exclude=node.ordered_given,
+                    check=False, manual=True, rational=False)[0].values()[0]
+
+            cond_func = lambdify(tuple(node.ordered_given), cond_sol,
+                    modules=[{'umin':umin, 'ufloor':ufloor}, mcerp.umath, 'numpy', 'sympy'])
+            func = lambdify(tuple(node.ordered_given), func_sol,
+                    modules=[{'umin':umin, 'ufloor':ufloor}, mcerp.umath, 'numpy', 'sympy'])
+            node.func = functools.partial(actual_func, cond_func=cond_func, func=func)
+            node.func_str = lambdastr(tuple(node.ordered_given), func_sol)
+
         def umin(a, b):
             if not isinstance(a, mcerp.UncertainFunction) and not isinstance(b, mcerp.UncertainFunction):
                 return min(a, b)
@@ -400,6 +445,29 @@ class Interpreter(object):
                 a._mcpts = x
                 return a
 
+        def do_generation(cur, do_solve=False):
+            assert isinstance(cur.val, Relation)
+            syms = {}
+            for name in cur.val.names:
+                syms.update(SympyHelper.initSyms(name,
+                    self.v2v[getBaseName(name)].vector and cur.val.deferred))
+            exprs = SympyHelper.initExprs([cur.val.str], syms)
+            # Sympy bug workaround:
+            # Must set rational to False, otherwise piecewise function cannot be solved correctly.
+            if do_solve:
+                solutions = solve(exprs, exclude=cur.ordered_given,
+                        check=False, manual=True, rational=False)
+                solution = solutions[0].values()[0]
+            else:
+                solutions = simplify(exprs)
+                solution = solutions[0]
+            if len(solutions) != 1:
+                # We cannot handle multiplte solutions yet.
+                raise NotImplementedError
+            cur.func = lambdify(tuple(cur.ordered_given), solution,
+                    modules=[{'umin':umin, 'ufloor':ufloor}, mcerp.umath, 'numpy', 'sympy'])
+            cur.func_str = lambdastr(tuple(cur.ordered_given), solution)
+
         # TODO: cycle elimination.
 
         # Turns equation into lambda function.
@@ -414,21 +482,11 @@ class Interpreter(object):
                     assert e.src is cur
                     assert e.dst.getType() == NodeType.VARIABLE
                     cur.setOutName(e.dst.val)
-            print(cur.val.str)
-            syms = {}
-            for name in cur.val.names:
-                syms.update(SympyHelper.initSyms(name, self.v2v[getBaseName(name)].vector))
-            exprs = SympyHelper.initExprs([cur.val.str], syms)
-            # Sympy bug workaround:
-            # Must set rational to False, otherwise piecewise function cannot be solved correctly.
-            solutions = solve(exprs, exclude=cur.ordered_given, check=False, manual=True, rational=False)
-            if len(solutions) != 1:
-                # We cannot handle multiplte solutions yet.
-                raise NotImplementedError
-            solution = solutions[0].values()[0]
-            cur.func = lambdify(tuple(cur.ordered_given), solution,
-                    modules=[{'umin':umin, 'ufloor':ufloor}, mcerp.umath, 'numpy', 'sympy'])
-            cur.func_str = lambdastr(tuple(cur.ordered_given), solution)
+            if cur.val.scripted:
+                do_filter(cur)
+            else:
+                # This is generating value, do solving.
+                do_generation(cur, do_solve=True)
         
         # Turns constraint into lambda function.
         for cur in self.graph.getNextConNode():
@@ -439,18 +497,11 @@ class Interpreter(object):
                 assert e.src.getType() == NodeType.VARIABLE or e.src.getType() == NodeType.INPUT
                 cur.ordered_given.append(e.src.val)
                 cur.setOutName()
-            syms = {}
-            for name in cur.val.names:
-                syms.update(SympyHelper.initSyms(name, self.v2v[getBaseName(name)].vector))
-            exprs = SympyHelper.initExprs([cur.val.str], syms)
-            solutions = simplify(exprs)
-            if len(solutions) != 1:
-                # We cannot handle multiplte solutions yet.
-                raise NotImplementedError
-            solution = solutions[0]
-            cur.func = lambdify(tuple(cur.ordered_given), solution,
-                    modules=[{'umin':umin, 'ufloor':ufloor}, mcerp.umath, 'numpy', 'sympy'])
-            cur.func_str = lambdastr(tuple(cur.ordered_given), solution)
+            if cur.val.scripted:
+                # This is inequality or over-determined, do not solve.
+                do_filter(cur)
+            else:
+                do_generation(cur)
 
     def evaluate_graph(self, node, k, val):
         """ Evaluates node and propogates its value.
@@ -475,9 +526,9 @@ class Interpreter(object):
             node.proped[k] = val
             # When we have all inputs ready.
             if set(node.ordered_given) == set(node.proped.keys()):
-                print 'evaluate: {}'.format(node.func_str)
+                logging.debug('evaluate: {}'.format(node.func_str))
                 node.out_val = node.func(**(node.proped))
-                #print 'gen: {}={}'.format(node.out_name, node.out_val)
+                logging.debug('gen: {}={}'.format(node.out_name, node.out_val))
                 self.evaluate_graph(self.v2n[node.out_name], node.out_name, node.out_val)
         else:
             assert node.getType() == NodeType.CONSTRAINT, \
@@ -491,6 +542,7 @@ class Interpreter(object):
                 self.v2n[v].addExtName(getExtName(v))
             # Variables produce their own value at evaluation.
             self.v2n[v].setOutName(v)
+            self.v2n[v].vector = self.v2v[v].vector
             self.graph.addNode(self.v2n[v])
 
         # Add input nodes.
@@ -507,6 +559,7 @@ class Interpreter(object):
                     if hasExtName(v):
                         self.v2n[v].addExtName(getExtName(v))
                     self.v2n[v].setOutName(v)
+                    self.v2n[v].vector = self.v2v[getBaseName(v)].vector
                     self.graph.addNode(self.v2n[v])
 
         for e in self.eq_set:
@@ -546,7 +599,7 @@ class Interpreter(object):
         return cloned_set
 
     def splitNode(self, cur, ext_set):
-        print 'Split [{}]'.format(cur.id)
+        logging.debug('Split [{}]'.format(cur.id))
         if not cur in self.graph.node_set:
             return
         neighbours = [cur.next(e) for e in cur.edges
@@ -554,7 +607,8 @@ class Interpreter(object):
         if cur.getType() == NodeType.VARIABLE:
             cloned_set = self.cloneNode(cur, ext_set)
             self.graph.removeNode(cur)
-            print '[{}] {} split into {}'.format(cur.id, cur.val, [(n.id, n.val) for n in cloned_set])
+            logging.debug('[{}] {} split into {}'.format(
+                cur.id, cur.val, [(n.id, n.val) for n in cloned_set]))
             assert cur.val in self.var_set
             self.var_set.remove(cur.val)
             del self.v2n[cur.val]
@@ -570,9 +624,9 @@ class Interpreter(object):
                 self.splitNode(n, ext_set)
             cloned_set = self.cloneNode(cur, ext_set)
             self.graph.removeNode(cur)
-            print '[{}] {} split into'.format(cur.id, cur.val.str)
+            logging.debug('[{}] {} split into'.format(cur.id, cur.val.str))
             for n in cloned_set:
-                print '\t[{}] {}'.format(n.id, n.val.str)
+                logging.debug('\t[{}] {}'.format(n.id, n.val.str))
         else:
             # Propagation ends at inputs.
             assert cur.getType() == NodeType.INPUT
@@ -598,7 +652,7 @@ class Interpreter(object):
                 for ext in ext_set:
                     full_name = concatExtName(base_name, ext)
                     assert full_name in self.v2n
-                print 'Start spliting from [{}] {}'.format(cur.id, cur.val)
+                logging.debug('Start spliting from [{}] {}'.format(cur.id, cur.val))
                 self.splitNode(cur, ext_set)
             # Otherwise, the extensios only exist in inputs, or the node has been split
             # via propagation.
@@ -637,7 +691,7 @@ class Interpreter(object):
             if hasExtName(var) and base_name == getBaseName(var):
                 exts.add(getExtName(var))
         assert exts
-        print 'All ext names for {}: {}'.format(base_name, exts)
+        logging.debug('All ext names for {}: {}'.format(base_name, exts))
         return exts
 
     def link(self):
@@ -999,7 +1053,7 @@ class Interpreter(object):
         print('Time used: {}'.format(end-start))
 
     def run(self):
-        self.program.dump()
+        #self.program.dump()
         self.link()
         self.gen_inputs()
         self.build_dependency_graph()

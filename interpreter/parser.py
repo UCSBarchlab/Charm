@@ -18,8 +18,8 @@ all_names = '''
 program
 typeDef
 ruleDef
+givenStmt
 assumeStmt
-letStmt
 solveStmt
 '''.split()
 
@@ -45,7 +45,7 @@ arglist = Forward().setName('arglist')
 
 func = (term + arglist).setName('func')
 varName = (term + Optional(Literal('[') + Literal(']'))).setName('varName')
-equation = Group(expression + equalityOp + (expression ^ func)).setName('equation')
+equation = (expression + equalityOp + (expression ^ func)).setName('equation')
 constraint << (expression + inequalityOp + expression +
     Optional((Literal('&&') | Literal('||')) + constraint))
 typeName = Group(term + Optional(typeExt))
@@ -64,22 +64,22 @@ ruleBody = indentedBlock(varDecl ^ constraint(Names.constraint) ^ equation(Names
         indentStack)(Names.ruleBody)
 ruleDef = Group(ruleDecl + ruleBody).setResultsName(Names.ruleDef, True)
 
-list_struct = (Optional(term) + Literal('[') + arg +
-        ZeroOrMore(COMMA + arg) + Literal(']') +
+list_struct = Optional(term) + Literal('[') + arg + \
+        ZeroOrMore(COMMA + arg) + Literal(']') + \
         Optional(Literal('|') +
-            Group(equation ^ constraint).setResultsName(Names.listCond, True)))
+                (equation ^ constraint))
 tuple_struct = (LPA + arg + ZeroOrMore(COMMA + arg) + RPA).setName('tuple')
 struct = (list_struct ^ tuple_struct).setName('struct')
 
-assumeStmt = Group(Literal('assume') +
+givenStmt = Group(Literal('given') +
         OneOrMore(term +
             Optional(COMMA))(Names.assumedRule)).setResultsName(Names.assume, True)
-letStmt = (Suppress('let') + equation +
+assumeStmt = (Suppress('assume') + equation +
         Optional(ZeroOrMore(COMMA.suppress() + equation))).setResultsName(Names.let, True)
 solveStmt = Group(Literal('explore') +
         OneOrMore(term +
             Optional(COMMA.suppress()))(Names.target)).setResultsName(Names.solve, True)
-analysisStmt = (assumeStmt | letStmt | solveStmt) + ENDL
+analysisStmt = (givenStmt | assumeStmt | solveStmt) + ENDL
 blankStmt = Suppress((LineStart() + LineEnd()) ^ White()).setName('blankStmt')
 commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
 stmt = typeDef | ruleDef | analysisStmt | blankStmt | commentStmt
@@ -98,11 +98,11 @@ def do_solveStmt(s, l, t):
     ast_nodes.append(SolveNode(t.asDict()))
     return
 
-def do_letStmt(s, l, t):
+def do_assumeStmt(s, l, t):
     ast_nodes.append(LetNode(t.asDict()))
     return
 
-def do_assumeStmt(s, l, t):
+def do_givenStmt(s, l, t):
     ast_nodes.append(AssumeNode(t.asDict()))
     return
 
@@ -138,8 +138,8 @@ def main():
         typeDef.setDebug()
         ruleDef.setDebug()
         blankStmt.setDebug()
+        givenStmt.setDebug()
         assumeStmt.setDebug()
-        letStmt.setDebug()
         solveStmt.setDebug()
         func.setDebug()
         equation.setDebug()

@@ -115,22 +115,22 @@ define thermal_leakage_power_model:
     I_sub = a * (w / l) * (v_t ** 2) * exp((v_gs - v_th) / (n * v_t))
     # Gate leakage model.
 
-assume thermal_voltage_model, gate_delay_model, pollack_rule, normalized_chip_performance_model, black_equation
-#let thermal_voltage = 0.026
-let temperature = 300.0
-let average_current = 0.001
-let gate_voltage = 3.0
-let load_capacitance = 1.0
-let nominal_gate_delay = 30.0
-let kMat = 0.005
-let core_size = 16
+given thermal_voltage_model, gate_delay_model, pollack_rule, normalized_chip_performance_model, black_equation
+#assume thermal_voltage = 0.026
+assume temperature = 300.0
+assume average_current = 0.001
+assume gate_voltage = 3.0
+assume load_capacitance = 1.0
+assume nominal_gate_delay = 30.0
+assume kMat = 0.005
+assume core_size = 16
 explore core_performance
 
-#assume pollack_rule, normalized_chip_performance_model, gate_delay_model, dynamic_power_model, thermal_voltage_model, chip_temperature_model, black_equation, thermal_leakage_power_model
+#given pollack_rule, normalized_chip_performance_model, gate_delay_model, dynamic_power_model, thermal_voltage_model, chip_temperature_model, black_equation, thermal_leakage_power_model
 
-#let gate_width = 8
-#let gate_length = 42
-#let activation_energy = 0.7
-#let emissio_coefficient = 
-#let core_size = 16
+#assume gate_width = 8
+#assume gate_length = 42
+#assume activation_energy = 0.7
+#assume emissio_coefficient = 
+#assume core_size = 16
 #explore core_performance

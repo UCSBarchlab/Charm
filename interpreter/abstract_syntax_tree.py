@@ -19,7 +19,8 @@ class Names(object):
     equation = 'equation'
     from_file='File'
     let = 'let_stmt'
-    listCond = 'list_cond'
+    listCond = '|'
+    listConstruct = '['
     metricBody = 'metric_body'
     metricDef = 'metric_def'
     metricName = 'metric_name'
@@ -206,7 +207,6 @@ class RuleNode(Node):
         return dump_str
 
     def parse(self):
-        print self.toks
         assert Names.ruleDef in self.toks
         assert len(self.toks[Names.ruleDef]) == 1
         k2v = self.toks[Names.ruleDef][0]
@@ -245,8 +245,6 @@ class RuleNode(Node):
                     val = solve(parse_expr(eq_str,
                         transformations=(convert_equals_signs,auto_symbol,)))
                     if isinstance(val, list):
-                        print expr
-                        print val
                         self.given[self.a2n[short_names.pop()]] = \
                                 str(val[0]) if len(val) == 1 else str(val)
                     else:
@@ -354,13 +352,17 @@ class Relation(Node):
     """
     def __init__(self, toks, a2n):
         super(Relation, self).__init__()
+        self.deferred = False
+        self.scripted = False
         self.orig = ''.join(toks)
+        # Whether to check for index variables.
         strict_check = True
-        if Names.summation in toks or Names.product in toks:
-            strict_check = False
-        if Names.max_func in toks or Names.min_func in toks:
-            strict_check = False
-            self.minmax = True
+        if Names.summation in toks or \
+                Names.product in toks:
+            self.deferred = True
+        if Names.listCond in toks:
+            self.scripted = True
+        strict_check = not self.deferred and not self.scripted
         self.alias = set(extract_variables(self.orig))
         if not strict_check:
             self.alias = self.alias & set(a2n.keys())

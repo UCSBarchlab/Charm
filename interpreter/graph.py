@@ -72,8 +72,10 @@ class GraphEdge(IdObject):
             raise ValueError('Bad graph edge ({}->{})'.format(self.src.id, self.dst.id))
 
     def getPrintable(self):
-        return '{}{}{}'.format((self.node1.id, '--', self.node2.id)
-                if not self.isDirected() else (self.src.id, '->', self.dst.id))
+        if not self.isDirected():
+            return '{}{}{}'.format(self.node1.id, '--', self.node2.id)
+        else:
+            return '{}{}{}'.format(self.src.id, '->', self.dst.id)
 
     def __eq__(self, rhs):
         """ Equality exists when the nodes are the same, no matter directed or not.
@@ -85,6 +87,7 @@ class GraphNode(Node):
     def __init__(self, node_type, val):
         super(GraphNode, self).__init__()
         self.type = node_type
+        self.vector = False
         # The actual value of the node, depending on the node type, it can be either:
         # 1. a variable name in string, or
         # 2. an relation node in the AST
@@ -106,7 +109,7 @@ class GraphNode(Node):
     def getPrintable(self):
         return '{} ({})\n\t{}'.format(self.val if (self.getType() == NodeType.INPUT or
             self.getType() == NodeType.VARIABLE) else self.val.str,
-            NodeType.getPrintable(self.getType()), ' '.join([e.getPrintable() for e in n.edges]))
+            NodeType.getPrintable(self.getType()), '\n\t'.join([e.getPrintable() for e in self.edges]))
 
     def dump(self):
         logging.debug('GraphNode {} {}:'.format(self.id, 'marked' if self.marked else ''))
@@ -119,6 +122,7 @@ class GraphNode(Node):
         """
         node = GraphNode(self.type, None)
         node.marked = self.marked
+        node.vector = self.vector
         node.exts = deepcopy(self.exts)
         node.addExtName(ext)
         for e in self.edges:
@@ -357,10 +361,11 @@ class Graph(object):
                 if not e.src.out_val is None:
                     n.proped[e.src.out_name] = e.src.out_val
             if set(n.proped.keys()) == set(n.ordered_given):
-                #print 'Eval Con with {}\nResult: {}'.format(n.proped, n.func(**(n.proped)))
+                logging.debug('Eval Con with {}\nResult: {}'.format(
+                    n.proped, n.func(**(n.proped))))
                 pass
             if set(n.proped.keys()) < set(n.ordered_given) or not n.func(**(n.proped)):
-                #print 'VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped)
+                print 'VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped)
                 return False
         return True
 

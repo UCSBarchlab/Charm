@@ -33,18 +33,17 @@ define hill_marty:
     
     t_s = (1 - f + c * N_total) / p_s
     t_p = f / p_p
-    p_s = Max(P[i] | DN[i] > 0)
+    p_s = max(P[i] | DN[i] > 0)
     p_p = Sum(DN[i] * P[i], (i, 0, N_types))
     N_total = Sum(DN[i], (i, 0, N_types))
     A_total >= Sum(A[i] * DN[i], (i, 0, N_types))
-    #P[] = A[] ** .5
+    P = A ** .5
 
-assume amdahl_law, hill_marty
-let A[] = list((1., 8., 16., 32., 64., 128., 256.))
-let P[] = list((1., 1., 1., 1., 1., 1.))
-let DN[] = list((0, 0, 0, 0, 0, 1))
-let N_types = 5
-let fraction_parallelism = 0.9
-let unit_communication_cost = 0.01
-let total_area = 256.0
-explore speedup
+given amdahl_law, hill_marty
+assume A[] = list((1., 8., 16., 32., 64., 128., 256.))
+assume DN[] = list((0, 0, 0, 0, 0, 1, 0))
+assume N_types = 6
+assume fraction_parallelism = Gauss(0.999, 0.001)
+assume unit_communication_cost = 0.001
+assume total_area = 256.0
+explore speedup 
