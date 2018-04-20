@@ -18,8 +18,8 @@ define logCA_basemodel:
 	speedup : R+
 	speedup_large_g : R+
 	speedup_small_g : R+
-	g1 : I+ # granularity to achieve a speedup of 1
-	g_half : I+ # granularity to achieve a speedup half of the acceleration
+	g1 : R+ # granularity to achieve a speedup of 1
+	g_half : R+ # granularity to achieve a speedup half of the acceleration
 
 	# Equations #
 	speedup = (C * g**b)/(o + L + (C * g**b)/A) # Eq.2
@@ -42,8 +42,8 @@ define logCA_g_latency_model:
         speedup : R+
         speedup_large_g : R+
         speedup_small_g : R+
-        g1 : I+ # granularity to achieve a speedup of 1
-        g_half : I+ # granularity to achieve a speedup half of the acceleration
+        g1 : R+ # granularity to achieve a speedup of 1
+        g_half : R+ # granularity to achieve a speedup half of the acceleration
 
         # Equations #
         speedup = (C * g**b)/(o + L*g + (C * g**b)/A) # Eq.8
@@ -55,8 +55,7 @@ define logCA_g_latency_model:
 
 # Example from Table 5 for AES
 given logCA_g_latency_model
-# currently, CMARM does not support typechecking. In reality, all granularities should be int.
-assume g = 3.5
+assume g = 3
 assume b = 1.01
 assume L = 3
 assume o = 10
