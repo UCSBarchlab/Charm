@@ -18,52 +18,6 @@ def _print_Product(self, expr):
         loops=' '.join(loops))
 SPL.NumPyPrinter._print_Product = _print_Product
 
-class Z3Helper(object):
-    @staticmethod
-    def sym2real(x):
-        dynamic_src = str(x) + ' = z3.Real("' + str(x) + '")'
-        return compile(dynamic_src, '', 'exec')
-
-    @staticmethod
-    def sym2bool(x):
-        dynamic_src = str(x) + ' = z3.Bool("' + str(x) + '")'
-        return compile(dynamic_src, '', 'exec')
-
-    @staticmethod
-    def getIterable(x):
-        if isinstance(x, collections.Iterable):
-            return x
-        else:
-            return (x,)
-
-    # input args: 
-    #   solver:  solver ref
-    #   syms:    symbols in expr
-    #   exprs:   the expressions to add as constraints
-    @staticmethod
-    def addCons(solver, syms, exprs):
-        for sym in Z3Helper.getIterable(syms):
-            exec(Z3Helper.sym2real(sym))
-        expr_strs = str(exprs).replace("sqrt", "z3.Sqrt")
-        solver.add(eval(expr_strs))
-
-    @staticmethod
-    def addSoftCons(solver, ctrl, syms, exprs):
-        for sym in Z3Helper.getIterable(syms):
-            exec(Z3Helper.sym2real(sym))
-
-        # convert ctrl to z3 bool
-        exec(Z3Helper.sym2bool(ctrl))
-
-        # add constraints one by one
-        for expr in Z3Helper.getIterable(exprs):
-            expr_str = str(expr).replace("sqrt", "z3.Sqrt")
-            print(eval(expr_str))
-            solver.add(z3.Implies(eval(str(ctrl)), eval(expr_str)))
-        
-        return {str(ctrl): eval(str(ctrl))}
-
-
 class SympyHelper(object):
 
     @staticmethod

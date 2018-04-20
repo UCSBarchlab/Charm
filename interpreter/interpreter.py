@@ -10,7 +10,6 @@ from base.helpers import *
 from collections import defaultdict, deque
 from graph import *
 from base.distributions import Dummy, Gauss
-from smt_wrapper import SMTInstance
 from sympy import simplify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.lambdify import lambdify, lambdastr
@@ -847,150 +846,6 @@ class Interpreter(object):
         for k, v in self.assumptions.iteritems():
             self.given[(k, )] = (v, )
 
-    def test_gc_overhead(self):
-        # Test time overhead for graph conversion.
-        dfs_time = 0.
-        z3_time = 0.
-        mm_time = 0.
-        N = 20
-        for i in range(N):
-            rg = RandomGraph(9, 9, sparse=False, drawable=self.drawable)
-            self.graph = rg.getGraph()
-            if self.use_z3:
-                solvable, time = self.convert_to_functional_graph_using_z3()
-            z3_time += time
-            for e in self.graph.edge_set:
-                e.reset()
-            start = timer()
-            assert solvable == self.convert_to_functional_graph()
-            end = timer()
-            dfs_time += end-start
-            self.graph = rg.getNxGraph()
-            start = timer()
-            biGraph.maximum_matching(self.graph)
-            end = timer()
-            mm_time += end-start
-        print 'Avg z3 time used: {}'.format(z3_time/N)
-        print 'Avg dfs time used: {}'.format(dfs_time/N)
-        print 'Avg mm time used: {}'.format(mm_time/N)
-        return True
-
-    def optimizeSMT(self, smt, knobs, k2s=None, minimize=True):
-        """ Turns SMT solving to optimization by iteratively adding
-            assumptions about 'knobs' with a step defined in dict k2s.
-
-        Args:
-            smt: an SMTInstance.
-            knobs: list of variable names that we can tune.
-            k2s: var_name -> step_value.
-            minimize: direction of optimization.
-        """
-
-        assert smt, 'No smt instance to optimize.'
-        assert knobs, 'Optimizing objective is emptyset.'
-        solution = smt.solve()
-        opt_solution = solution
-        while solution:
-            logging.debug('SMT OPT TRACE: {}'.format(solution))
-            opt_solution = solution
-            asmpts = []
-            for k in knobs:
-                op = '<' if minimize else '>'
-                new_con = k + op + str(
-                        float(solution[k].as_decimal(3).replace('?', '')
-                        if isinstance(solution[k], z3.RatNumRef) else solution[k].as_string()) +
-                        (k2s[k] if k2s else 0))
-                asmpts.append(new_con)
-            logging.debug('SMT assumes\n\t[{}]'.format(',\n\t'.join(asmpts)))
-            smt.makeAssumptions(asmpts)
-            solution = smt.solve()
-            smt.clearAssumptions()
-        print '{}: {}'.format('Opt solution', '[' + ',\n'.join(
-            [tar + ': ' + str(opt_solution[tar]) for tar in self.targets]) + ']')
-
-    def constructSMTInstance(self):
-        var_map = {}
-        rel_list = []
-        # Variable types.
-        for var in self.v2t.keys():
-            var_map[var] = self.v2t[var].data_type
-        # Relations.
-        for n in self.graph.getNextRelationNode():
-            rel_list.append(n.val.str)
-        # Relations from let stmt.
-        let_eqs = []
-        mutable_eqs = []
-        results = defaultdict(list)
-        iter_vars, iter_vals = [], []
-        flat_iter_vars = []
-        for k, v in self.given.iteritems():
-            if isinstance(v, list):
-                iter_vars.append(k)
-                iter_vals.append(v)
-                for var in k:
-                    flat_iter_vars.append(var)
-        if flat_iter_vars:
-            print "Result {}".format(tuple(flat_iter_vars))
-
-        # Handle flat variables.
-        for key, val in self.given.iteritems():
-            for k, v in zip(key, val):
-                # Propagate non-iterables first.
-                if not k in flat_iter_vars and k in self.v2n:
-                    #print k, v
-                    let_eqs.append(k + '=' + str(v))
-
-        rel_list.extend(let_eqs)
-        return SMTInstance(var_map, rel_list)
-
-    def solveSMT(self):
-        var_map = {}
-        rel_list = []
-        # Variable types.
-        for var in self.v2t.keys():
-            var_map[var] = self.v2t[var].data_type
-        # Relations.
-        for n in self.graph.getNextRelationNode():
-            rel_list.append(n.val.str)
-        # Relations from let stmt.
-        let_eqs = []
-        mutable_eqs = []
-        results = defaultdict(list)
-        iter_vars, iter_vals = [], []
-        flat_iter_vars = []
-        for k, v in self.given.iteritems():
-            if isinstance(v, list):
-                iter_vars.append(k)
-                iter_vals.append(v)
-                for var in k:
-                    flat_iter_vars.append(var)
-        if flat_iter_vars:
-            print "Result {}".format(tuple(flat_iter_vars))
-
-        # Handle flat variables.
-        for key, val in self.given.iteritems():
-            for k, v in zip(key, val):
-                # Propagate non-iterables first.
-                if not k in flat_iter_vars and k in self.v2n:
-                    #print k, v
-                    let_eqs.append(k + '=' + str(v))
-        rel_list.extend(let_eqs)
-
-        # Handle iterations.
-        proped_vals = dict([(k, None) for k in flat_iter_vars])
-        for t in itertools.product(*tuple(iter_vals)):
-            mutable_eqs = []
-            for key, val in zip(iter_vars, t):
-                for k, v in zip(key, val):
-                    #print k, v
-                    mutable_eqs.append(k + '=' + str(v))
-                    proped_vals[k] = v
-            tag = tuple([proped_vals[var] for var in flat_iter_vars])
-            smt = SMTInstance(var_map, rel_list + mutable_eqs)
-            solution = smt.solve()
-            for tar in self.targets:
-                print 'Result: {} -> {} = {}'.format(tag, tar, solution[tar])
-
     def solveDetermined(self):
         results = defaultdict(list)
         iter_vars = []
@@ -1057,15 +912,12 @@ class Interpreter(object):
         self.gen_inputs()
         self.build_dependency_graph()
         
-        use_smt = False
         consistent_and_determined = False
         consistent_and_determined = self.convert_to_functional_graph()
 
-        if not consistent_and_determined and not use_smt:
+        if not consistent_and_determined:
             print 'System underdetermined or inconsistent, '\
-                    'and not using z3 core, aborting evaluation...'
-        elif consistent_and_determined and not use_smt:
+                    'aborting evaluation...'
+        else:
             self.generate_functions()
             self.solveDetermined()
-        else:
-            raise ValueError('Should not be here.')
