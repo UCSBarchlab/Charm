@@ -16,7 +16,6 @@ from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.lambdify import lambdify, lambdastr
 from timeit import default_timer as timer
 from utils.random_graph_generator import RandomGraph
-from z3core import graph_transform_z3
 
 def hasExtName(name):
     # A valid extended variable name can only have one dot extension.
@@ -1060,12 +1059,7 @@ class Interpreter(object):
         
         use_smt = False
         consistent_and_determined = False
-        if self.use_z3:
-            consistent_and_determined, _ = self.convert_to_functional_graph_using_z3()
-            if not consistent_and_determined:
-                use_smt = True
-        else:
-            consistent_and_determined = self.convert_to_functional_graph()
+        consistent_and_determined = self.convert_to_functional_graph()
 
         if not consistent_and_determined and not use_smt:
             print 'System underdetermined or inconsistent, '\
@@ -1073,18 +1067,5 @@ class Interpreter(object):
         elif consistent_and_determined and not use_smt:
             self.generate_functions()
             self.solveDetermined()
-        elif not consistent_and_determined and use_smt:
-            print 'System underdetermined or inconsistent, '\
-                    'trying to solve as an SMT instance...'
-            self.solveSMT()
-            #smt = self.constructSMTInstance()
-            # TODO: need a way to express this in DSL.
-            #knobs = ['computation', 'computation_to_communication_ratio']
-            #k2s = {}
-            #k2s['computation'] = 1.0
-            #k2s['computation_to_communication_ratio'] = 1.0
-            #knobs = ['T_m', 'T_n']
-            #k2s = None
-            #self.optimizeSMT(smt, knobs, k2s = k2s, minimize=False)
         else:
             raise ValueError('Should not be here.')

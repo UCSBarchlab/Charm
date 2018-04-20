@@ -1,6 +1,5 @@
 import collections
 import re
-import z3
 from sympy import symbols, numbered_symbols, IndexedBase, Idx, Function, DeferredVector
 from sympy.parsing.sympy_parser import parse_expr, _token_splittable, convert_equals_signs, split_symbols_custom, auto_symbol
 
