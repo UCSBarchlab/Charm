@@ -4,9 +4,6 @@ import mcerp
 import numpy as np
 import scipy.stats as ss
 from mcerp import *
-from utils.kde import Transformations
-from utils.boxcox import BoxCox
-from utils.plotting import PlotHelper
 
 def Dummy():
     return Distribution.GetDummy()
@@ -31,108 +28,6 @@ class Distribution(object):
         #X = Distribution.GetDummy()
         #X._mcpts = np.asarray([val] * mcerp.npts)
         return val
-
-    @staticmethod
-    def DistributionFromBoxCoxGaussian(
-            target_mean, target_std, samples, lower=None, upper=None): 
-        # Uncomment following codes to disable additional transformation.
-        if lower is not None:
-            lower = None
-        if upper is not None:
-            upper = None
-
-        # Training sample size to use.
-        k =50 
-        seeds = np.random.choice(len(samples), replace=False, size=k)
-        train_set = np.asarray([samples[s] for s in seeds])
-        samples = train_set
-        #logging.debug('Boxcox sample size: {}'.format(len(samples)))
-
-        target_var = target_std * target_std
-        if lower is not None and upper is None:
-            samples = np.log(np.asarray(samples) - lower)
-            reverse_func = lambda x: np.exp(x) + lower
-            desired_mean = (np.log(target_mean - lower) -
-                    (target_var/2) * (1/np.power(target_mean - lower, 2)))
-            desired_var = target_var * np.power(1/(target_mean - lower), 2)
-        elif lower is None and upper is not None:
-            samples = np.log(-1. * np.asarray(samples) - (-1. * upper))
-            reverse_func = lambda x: -1. * (np.exp(x) + (-1. * upper))
-            desired_mean = (np.log(-1.*target_mean + upper) - 
-                    (target_var/2) * (1/np.power(target_mean - upper, 2)))
-            desired_var = target_var * np.power(1/(target_mean - upper), 2)
-        elif lower is not None and upper is not None:
-            assert lower < upper, 'Distribution -- Input variable bound error, lower >= upper'
-            samples = (np.asarray(samples) - lower) / (upper - lower)
-            assert np.amin(samples) > 0 and np.amax(samples) < 1
-            samples = Transformations.logit(samples)
-            reverse_func = lambda x: Transformations.sigmoid(x * (upper-lower) + lower)
-            desired_mean = (Transformations.logit(target_mean) +
-                    (target_var/2) *
-                    ((2*target_mean-1)/(np.power(target_mean*(target_mean-1), 2))))
-            desired_var = target_var * np.power(-1. / ((target_mean - 1) * target_mean), 2)
-        else: 
-            reverse_func = lambda x: x
-            desired_mean = target_mean
-            desired_var = target_var
-        desired_std = np.sqrt(desired_var)
-
-        # Shift data set to positive if needed.
-        shift = np.amin(samples) - Distribution.NON_ZERO_FACTOR
-        if shift < 0:
-            samples = samples - shift
-            desired_mean = desired_mean - shift
-            bt_func = lambda x: reverse_func(x + shift)
-        else:
-            bt_func = reverse_func
-
-        #BoxCox.test(samples, la=-40, lb=100)
-        a = BoxCox.find_lambda(samples)
-        #if a > -1. and a < 1.:
-        #    a = 1. * round(a)
-        logging.debug('Distribution -- BoxCox @ {} target dist: {}, {}'.format(
-            a, target_mean, target_std))
-        logging.debug('Distribution -- BoxCox @ shift {} desired dist: {}, {}'.format(
-            shift, desired_mean, desired_std))
-
-        if a == .0:
-            bc_var = desired_var * np.power(1/desired_mean, 2)
-            bc_mean = np.log(desired_mean) - desired_var/2 * np.power(1/desired_mean, 2)
-            bc_std = np.sqrt(bc_var)
-        elif a == 1.:
-            bc_var = desired_var
-            bc_mean = desired_mean - 1 + desired_var/2
-            bc_std = np.sqrt(bc_var)
-        else:
-            bc_var = desired_var * np.power(np.power(desired_mean, a-1), 2)
-            bc_mean = ((np.power(desired_mean, a) - 1) / a +
-                    (desired_var / 2) * ((a-1) * np.power(desired_mean, a-2)))
-            bc_std = np.sqrt(bc_var)
-
-        # Compute bounds on box-cox transformed domain.
-        bc_lower, bc_upper = None, None
-        if a > 0:
-            bc_lower = -1. / a
-            bc_upper = 2 * bc_mean - bc_lower
-        if a < 0:
-            bc_upper = -1. / a
-            bc_lower = 2 * bc_mean - bc_upper
-        #logging.debug('CustomDist -- Transformed scale dist: {}, {} ([{}, {}])'.format(
-        #    bc_mean, bc_std, bc_lower, bc_upper))
-        Y = Distribution.GetDummy()
-        max_trials = 20
-        while (max_trials):
-            # X: Gaussian in BoxCox transformed domain.
-            X = Distribution.GaussianDistribution(bc_mean, bc_std, bc_lower, bc_upper)
-            # Y: distribution in original domain.
-            Y._mcpts = BoxCox.back_transform(X._mcpts, a)
-            Y._mcpts = bt_func(Y._mcpts)
-            if (Y._mcpts >= 0).all():
-                logging.debug('Distribution -- BC-Generated dist: ({}, {})'.format(
-                    Y.mean, np.sqrt(Y.var)))
-                return Y
-            max_trials += -1
-        raise ValueError('Distribution -- Cannot generate proper BoxCox-Transformed distribution.')
 
     @staticmethod
     def DistributionFromSamplingFunction(sample_func, trans_func=None):
@@ -205,7 +100,6 @@ class Distribution(object):
         # Have to construct LogN ourselves, the parameterizaion in mcerp is not correct.
         dist = UncertainVariable(ss.lognorm(sigma, scale=np.exp(mu)))
         logging.debug('Lognorm -- Gen LogN: ({}, {})'.format(dist.mean, np.sqrt(dist.var)))
-        #PlotHelper.plot_hist(dist._mcpts)
         return dist
 
     @staticmethod
@@ -223,86 +117,3 @@ class Distribution(object):
             #logging.debug('CustomDist -- truncated gaussian: {}, {} [{}, {}]'.format(
             #    dist.mean, np.sqrt(dist.var), a, b))
             return dist
-
-    @staticmethod
-    def QLogNormalDistribution(p0, mean, std):
-        if std == .0:
-            return Distribution.ConstantDistribution(mean)
-        assert(p0 >=0 and p0 <= 1)
-        # Performance needs to be non zero, because num_core might be zero.
-        result_dist = (Bern(p0) * Distribution.LogNormalDistribution(mean, std) +
-                Distribution.NON_ZERO_FACTOR)
-        assert .0 not in result_dist._mcpts
-        logging.debug('QLognorm -- {}'.format(result_dist))
-        return result_dist
-
-    @staticmethod
-    def QGaussianDistribution(p0, mean, std, a = None, b = None):
-        if std == .0:
-            return Distribution.ConstantDistribution(mean)
-        assert(p0 >= 0 and p0 <= 1)
-        return (Bern(p0) * Distribution.GaussianDistribution(mean, std, a, b) +
-                Distribution.NON_ZERO_FACTOR)
-    
-    @staticmethod
-    def RelatedMax(dists):
-        """ @deprecated
-        Return a rv x related with list of distributions.
-        
-        Each sample of x will be set to max(samples of dists) or non_zero_factor.
-        """
-        assert(dists)
-        x = N(0, 1) # dummy, could be any UncertainVariable
-        mcpts = [None] * mcerp.npts
-        for i in range(mcerp.npts):
-            mcpts[i] = max([d._mcpts[i] for d in dists])
-            mcpts[i] = mcpts[i] if mcpts[i] else Distribution.NON_ZERO_FACTOR
-        x._mcpts = mcpts
-        return x
-
-    @staticmethod
-    def ConditionalMax(ns, ps):
-        """ @deprecated
-        Return a rv x, consisting of the maximum of ps if corresponding ns hold.
-
-        Each sample of x will be set to max(sample of p if corresponding n > 0) or non_zero_factor.
-
-        Args:
-            ns: conditionals, can be distributions or scalars.
-            ps: candidates, can be distributions or scalars.
-        Return:
-            x: result distribution.
-        """
-        assert(ns and ps)
-
-        if isinstance(ns[0], UncertainFunction) and isinstance(ps[0], UncertainFunction):
-            logging.debug('CustomDist -- Distributional candidates with distributional conditions.')
-            x = N(0, 1) # dummy, could be any UncertainVariable
-            mcpts = [None] * mcerp.npts
-            for i in range(mcerp.npts):
-                candidate = [p._mcpts[i] for n, p in zip(ns, ps) if n._mcpts[i] > 0]
-                mcpts[i] = max(candidate) if candidate else Distribution.NON_ZERO_FACTOR
-            x._mcpts = mcpts
-            return x
-        elif isinstance(ns[0], UncertainFunction) and not isinstance(ps[0], UncertainFunction):
-            logging.debug('CustomDist -- Scalar candidates with distributional conditions.')
-            x= N(1, 1)
-            mcpts = [None] * mcerp.npts
-            for i in range(mcerp.npts):
-                candidate = [p for n, p in zip(ns, ps) if n._mcpts[i] > 0]
-                mcpts[i] = max(candidate) if candidate else Distribution.NON_ZERO_FACTOR
-            x._mcpts = mcpts
-            return x
-        elif not isinstance(ns[0], UncertainFunction) and isinstance(ps[0], UncertainFunction):
-            logging.debug('CustomDist -- Distributional candidates with scalar conditions.')
-            x = N(1, 1)
-            mcpts = [None] * mcerp.npts
-            for i in range(mcerp.npts):
-                candidate = [p._mcpts[i] for n, p in zip(ns, ps) if n > 0]
-                mcpts[i] = max(candidate) if candidate else Distribution.NON_ZERO_FACTOR
-            x._mcpts = mcpts
-            return x
-        else:
-            logging.debug('CustomDist -- Scalar candidates with scalar conditions.')
-            candidate = [p for n, p in zip(ns, ps) if n > 0]
-            return np.amax(candidate)

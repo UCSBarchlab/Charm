@@ -14,7 +14,6 @@ from sympy import simplify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.lambdify import lambdify, lambdastr
 from timeit import default_timer as timer
-from utils.random_graph_generator import RandomGraph
 
 def hasExtName(name):
     # A valid extended variable name can only have one dot extension.
