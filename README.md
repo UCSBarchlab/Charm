@@ -10,7 +10,7 @@ numpy (v1.12.1)
 
 scipy (v0.18.1)
 
-merp (v0.11)
+mcerp (v0.11)
 
 sympy (v1.0.1)
 
