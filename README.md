@@ -12,7 +12,7 @@ scipy (v0.18.1)
 
 mcerp (v0.11)
 
-sympy (v1.0.1)
+sympy (v1.1.1)
 
 lmfit (v0.9.9)
 
