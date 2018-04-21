@@ -25,6 +25,7 @@ z3 (v4.6.0 with python binding)
 
 
 Note:
+
 add Charm/utils directory to the environment variable PYTHONPATH
 
 ### Example Usage
