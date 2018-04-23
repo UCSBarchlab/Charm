@@ -1,10 +1,10 @@
 Charm
 =====
 
-Charm is interpreted DSL and runtime for writing/managing
+Charm is an interpreted DSL and runtime for writing/managing
 closed-form high-level architecture models.
 
-### Dependencies
+### Prerequisites
 
 pyparsing (v2.2.0)
 
