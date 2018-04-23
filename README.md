@@ -20,18 +20,14 @@ lmfit (v0.9.9)
 
 networkx (v2.1)
 
-
-
 For SMT capabilities:
 
 z3 (v4.6.0 with python binding)
 
-
-Note:
-
-add Charm/utils directory to the environment variable PYTHONPATH
-
 ### Example Usage
+
+**Add Charm/utils directory to the environment variable PYTHONPATH**
+
 
 ```
 python interpreter/parser.py models/adder.charm
