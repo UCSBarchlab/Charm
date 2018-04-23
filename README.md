@@ -6,13 +6,15 @@ closed-form high-level architecture models.
 
 ### Dependencies
 
+pyparsing (v2.2.0)
+
 numpy (v1.12.1)
 
 scipy (v0.18.1)
 
 merp (v0.11)
 
-sympy (v1.0.1)
+sympy (v1.1.1)
 
 lmfit (v0.9.9)
 
