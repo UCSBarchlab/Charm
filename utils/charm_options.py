@@ -16,8 +16,6 @@ def parse_args(parser):
 def addCommonOptions(parser):
     parser.add_argument('--log', action='store', dest='loglevel',
             default='info', help='Set log level to: info, debug, verbose.')
-    parser.add_argument('--use-energy', action='store_true',
-            default=False, help='Use energy computation.')
 
 def addCompilerOptions(parser):
     parser.add_argument('source', action='store',
@@ -30,9 +28,3 @@ def addCompilerOptions(parser):
             help='Use Z3 as core engine.')
     parser.add_argument('--mcsamples', type=int, action='store', default=100,
             help='Number of samples to use for uncertain variables.')
-
-def addIOOptions(parser):
-    parser.add_argument('--save-path', action='store', default=None,
-            help='File path to dump result.')
-    parser.add_argument('--load-path', action='store', default=None,
-            help='File path to load result.')

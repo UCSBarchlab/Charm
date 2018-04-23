@@ -26,7 +26,7 @@ z3 (v4.6.0 with python binding)
 
 ### Example Usage
 
-**Add Charm/utils directory to the environment variable PYTHONPATH**
+  **Add Charm/utils directory to the environment variable PYTHONPATH**
 
 
 ```
