@@ -6,6 +6,8 @@ closed-form high-level architecture models.
 
 ### Prerequisites
 
+Python (v2.7.12)
+
 pyparsing (v2.2.0)
 
 numpy (v1.12.1)
