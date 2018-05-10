@@ -159,7 +159,7 @@ class GraphNode(Node):
                 nn = node.next(e)
                 node.removeEdge(e)
                 nn.removeEdge(e)
-            logging.debug('Create clone {} with {}'.format(node.id, ext_names))
+            logging.debug('Create clone {} from {} with {}'.format(node.id, self.id, ext_names))
             for ext_name in ext_names:
                 node.val.subs(ext_name)
         else:
@@ -212,7 +212,8 @@ class GraphNode(Node):
             assert t == NodeType.CONSTRAINT
             self.type = t
         else:
-            raise ValueError('Cannot set node type from {} to {}'.format(self.type, t))
+            raise ValueError('Cannot set node type from {} to {}'.format(self.type, t)), \
+                    self.getPrintable()
 
     def getType(self):
         return self.type
@@ -323,19 +324,18 @@ class Graph(object):
         return False
 
     def isConnected(self, node1, node2):
-        """ If connected in an undirected graph.
-        """
-        if node1 is node2:
-            return True
-        if node1.marked:
-            return False
-        node1.mark()
-        for e in node1.edges:
-            if self.isConnected(node1.next(e), node2):
-                node1.unmark()
-                return True
-        node1.unmark()
-        return False
+        connected = set()
+        q = deque()
+        q.append(node1)
+        connected.add(node1)
+        while q:
+            cur = q.popleft()
+            for e in cur.edges:
+                nb = cur.next(e)
+                if not nb in connected:
+                    q.append(nb)
+                connected.add(nb)
+        return node2 in connected
 
     def hasPath(self, src, dst):
         """ If has a path in directed graph.
@@ -383,10 +383,10 @@ class Graph(object):
             assert not has_conflict
 
     def draw(self, path='DAG', show=False):
-        logging.debug('Drawing {}'.format(path))
         if not self.drawable:
             return
 
+        logging.debug('Drawing {}'.format(path))
         plt.figure(figsize=(20, 10))
         G = nx.DiGraph()
         labels = {}

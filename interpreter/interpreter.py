@@ -283,15 +283,20 @@ class Interpreter(object):
                 continue
         input_eq_map = dict([(n.id, n.val.names) for n in self.graph.getNextEqNode()])
         solution, time = graph_transform_z3(input_map, input_eq_map)
+        logging.debug('z3 input map: {}'.format(input_map))
+        logging.debug('z3 eq map: {}'.format(input_eq_map))
         if not solution:
             # This is either underdetermined or inconsistent.
             return False, time
         else:
+            logging.debug('z3 solution: {}'.format(solution))
             # Update edges of equation nodes.
             for eq_id in solution.keys():
                 if not solution[eq_id]:
                     # Then this equation is a constraint.
-                    n.setType(NodeType.CONSTRAINT)
+                    for n in self.graph.node_set:
+                        if n.id == eq_id:
+                            n.setType(NodeType.CONSTRAINT)
                 else:
                     for n in self.graph.node_set:
                         # Get the equation node.
@@ -524,6 +529,9 @@ class Interpreter(object):
             # When we have all inputs ready.
             if set(node.ordered_given) == set(node.proped.keys()):
                 logging.debug('evaluate: {}'.format(node.func_str))
+                logging.debug('with: {}'.format(node.proped))
+                for k, v in node.proped.iteritems():
+                    logging.debug('\t{}: {}'.format(k, type(v)))
                 node.out_val = node.func(**(node.proped))
                 logging.debug('gen: {}={}'.format(node.out_name, node.out_val))
                 self.evaluate_graph(self.v2n[node.out_name], node.out_name, node.out_val)
@@ -596,7 +604,7 @@ class Interpreter(object):
         return cloned_set
 
     def splitNode(self, cur, ext_set):
-        logging.debug('Split [{}]'.format(cur.id))
+        logging.debug('Split [{}] {}'.format(cur.id, cur.getPrintable()))
         if not cur in self.graph.node_set:
             return
         neighbours = [cur.next(e) for e in cur.edges
@@ -659,8 +667,11 @@ class Interpreter(object):
             cur = self.v2n[name]
             for n in self.graph.node_set:
                 if not n is cur and n.val == cur.val:
-                    # TODO: is this always true?
-                    assert not self.graph.isConnected(n, cur)
+                    logging.debug('Merging {}'.format(n.val))
+                    # The following is not true in pra model when the extensions
+                    # appear in the same connected component as the base. They
+                    # can be linked via some path (other variables in between).
+                    #assert not self.graph.isConnected(n, cur)
                     for e in n.edges:
                         nn = n.next(e)
                         if e.isDirected():
@@ -764,7 +775,7 @@ class Interpreter(object):
                                 new_toks.append(t)
                         self.given[undecided] = ''.join(new_toks)
                 given_keys = set()
-                for k in self.given.keys():
+                for k in self.given.keys() + self.assumptions.keys():
                     if isinstance(k, tuple):
                         given_keys.update(set([getBaseName(n) for n in k]))
                     else:
@@ -897,8 +908,8 @@ class Interpreter(object):
                                 results[tag].append(self.v2n[tar].out_val)
                                 print 'Result {} -> {} = {}'.format(tag, tar, self.v2n[tar].out_val)
         end = timer()
-        file_name = '_2_'.join(self.targets)
-        file_name += '(' + '__'.join(flat_iter_vars) + ').out'
+        file_name = '-'.join(self.targets)
+        file_name += '-ON-' + '-'.join(flat_iter_vars) + '.out'
         with open(file_name, 'wb') as ofile:
             pickle.dump(results, ofile)
             ofile.close()

@@ -383,7 +383,7 @@ class Relation(Node):
 
     def subs(self, ext_name):
         base_name = ext_name[:ext_name.find(Names.clone_ext)]
-        assert base_name in self.names and not ext_name in self.names
+        assert base_name in self.names and not ext_name in self.names, ext_name
         self.names.remove(base_name)
         self.names.add(ext_name)
         for i in xrange(len(self.toks)):
