@@ -14,6 +14,7 @@ from sympy import simplify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.lambdify import lambdify, lambdastr
 from timeit import default_timer as timer
+from z3core import graph_transform_z3
 
 def hasExtName(name):
     # A valid extended variable name can only have one dot extension.
@@ -854,7 +855,7 @@ class Interpreter(object):
         self.given = tup_given
         # Add assumptions to given dict.
         for k, v in self.assumptions.iteritems():
-            self.given[(k, )] = (v, )
+            self.given[(k, )] = (eval(v), )
 
     def solveDetermined(self):
         results = defaultdict(list)
@@ -923,7 +924,10 @@ class Interpreter(object):
         self.build_dependency_graph()
         
         consistent_and_determined = False
-        consistent_and_determined = self.convert_to_functional_graph()
+        if self.use_z3:
+            consistent_and_determined, _ = self.convert_to_functional_graph_using_z3()
+        else:
+            consistent_and_determined = self.convert_to_functional_graph()
 
         if not consistent_and_determined:
             print 'System underdetermined or inconsistent, '\
