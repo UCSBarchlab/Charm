@@ -4,6 +4,8 @@ Charm
 Charm is an interpreted DSL and runtime for writing/managing
 closed-form high-level architecture models.
 
+Charm will be presented at ISCA'18 @ LA, CA.
+
 ### Prerequisites
 
 Python (v2.7.12)
@@ -35,6 +37,13 @@ z3 (v4.6.0 with python binding)
 python interpreter/parser.py models/adder.charm
 ```
 
-### Citation:
+### Contact & Citation:
 
+For general questions feel free to reach out to Archlab @ UCSB.
+
+For immediate help with Charm, contact Weilong (cuiwl@cs.ucsb.edu).
+
+To cite our work:
+'''
 Weilong Cui, Yongshan Ding, Deeksha Dangwal, Adam Holmes, Joseph McMahan, Ali JavadiAbhari, Georgios Tzimpragos, Frederic T. Chong and Timothy Sherwood. "Charm: A Language for Closed-form High-level Architecture Modeling" in Proceedings of the International Symposium of Computer Architecture (ISCA) June 2018. Los Angeles, CA.
+'''
