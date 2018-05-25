@@ -39,7 +39,7 @@ python interpreter/parser.py models/adder.charm
 
 ### Contact & Citation:
 
-For general questions feel free to reach out to Archlab @ UCSB.
+For general questions feel free to reach out to [Archlab @ UCSB](https://www.arch.cs.ucsb.edu/).
 
 For immediate help with Charm, contact Weilong (cuiwl@cs.ucsb.edu).
 
