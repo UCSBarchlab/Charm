@@ -1,9 +1,8 @@
 import copy
 import logging
-import mcerp
+import mcerp3 as mcerp
 import numpy as np
 import scipy.stats as ss
-from mcerp import *
 
 def Dummy():
     return Distribution.GetDummy()
@@ -17,7 +16,7 @@ class Distribution(object):
 
     NON_ZERO_FACTOR = 1e-6
     B_CACHE = {}
-    DUMMY = N(0, 1)
+    DUMMY = mcerp.N(0, 1)
 
     @staticmethod
     def GetDummy():
@@ -86,7 +85,7 @@ class Distribution(object):
         n = int(round(mean * mean / (mean - var)))
         assert p > .0 and n > .0, 'CustomDist -- p: {}, n: {}, mean: {}, std: {}, shift: {}'.format(
                 p, n, mean, std, shift)
-        return Binomial(n, p)
+        return mcerp.Binomial(n, p)
 
     @staticmethod
     def LogNormalDistribution(mean, std):
@@ -108,7 +107,7 @@ class Distribution(object):
             return Distribution.ConstantDistribution(mean)
         if a is None and b is None:
             # Unbounded Gaussian.
-            return N(mean, std*std)
+            return mcerp.N(mean, std*std)
         else:
             dist = UncertainVariable(ss.truncnorm(
                 a = -np.inf if a is None else (a - mean) / std,

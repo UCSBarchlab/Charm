@@ -1,0 +1,42 @@
+typedef I+ : int i
+    i > 0
+
+typedef R+ : float r
+    r > 0
+
+typedef Fraction : float f
+    f >= 0
+    f <= 1
+
+typedef Window : float f
+    f >= -1
+    f <= 1
+
+define Dragonfly:
+    g : I+ # Groups in the network.
+    a : I+ # N routers in each group.
+    #p : I+ # Terminal connections for each router.
+    h : I+ # N inter group connection for each router.
+    a_canonical : I+ as a_c # a in canonical topology.
+    g_canonical : I+ as g_c
+    d : Fraction # Density.
+    b : Window # Imbalance.
+    S_desired : I+ # Desired number of routers in the network.
+    
+
+    g_c = a_c + 1
+    g_c = (1 + (1 + 4 * S_desired) ** .5) / 2
+    
+    h = Max(0, floor(1 + d * (g - 2)))
+    g = Piecewise((ceiling(1 + (b + 1) * (g_c - 1)), b < 0), (ceiling(S_desired / a), b >= 0))
+    a = Piecewise((ceiling(S_desired / g), b < 0), (ceiling(1 + (1 - b) * (a_c - 1)), b >= 0))
+    
+
+    #g > 1    
+    #a * g >= S_desired
+
+given Dragonfly
+assume b = -0.5
+assume d = 1
+assume S_desired = 1000
+explore a, g, h, g_canonical

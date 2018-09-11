@@ -1,7 +1,7 @@
 import functools
 import itertools
 import logging
-import mcerp
+import mcerp3 as mcerp
 import networkx as nx
 from networkx.algorithms import bipartite as biGraph
 import numpy as np
@@ -10,6 +10,8 @@ from base.helpers import *
 from collections import defaultdict, deque
 from graph import *
 from base.distributions import Dummy, Gauss
+from SALib import sample as sa_sample
+from SALib import analyze as sa_analyze
 from sympy import simplify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.lambdify import lambdify, lambdastr
@@ -512,9 +514,9 @@ class Interpreter(object):
         if val is None:
             return
 
-        #print 'Evaluating [{}->{}]: {} with {}'.format(node.id, node.out_name,
+        #print 'Evaluating [{}->{}]: {} with {}\nalready has {}/{}'.format(node.id, node.out_name,
         #        node.val if (node.getType() == NodeType.INPUT or
-        #            node.getType() == NodeType.VARIABLE) else node.val.str, (k, val))
+        #            node.getType() == NodeType.VARIABLE) else node.val.str, (k, val), node.proped, node.ordered_given)
 
         if node.getType() == NodeType.INPUT or node.getType() == NodeType.VARIABLE:
             assert k == node.val, 'Unknown variable {} encountered durig evaluation'.format(k)
@@ -529,7 +531,7 @@ class Interpreter(object):
             node.proped[k] = val
             # When we have all inputs ready.
             if set(node.ordered_given) == set(node.proped.keys()):
-                logging.debug('evaluate: {}'.format(node.func_str))
+                logging.debug('**evaluate: {}'.format(node.func_str))
                 logging.debug('with: {}'.format(node.proped))
                 for k, v in node.proped.iteritems():
                     logging.debug('\t{}: {}'.format(k, type(v)))
@@ -856,6 +858,12 @@ class Interpreter(object):
         # Add assumptions to given dict.
         for k, v in self.assumptions.iteritems():
             self.given[(k, )] = (eval(v), )
+
+    def sensitivity_analysis(self):
+        pass
+        # TODO: transform U[0, 1] to domain specific distributions.
+        # TODO: range?
+        # TODO: evaluate model and perform analysis.
 
     def solveDetermined(self):
         results = defaultdict(list)

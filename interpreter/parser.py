@@ -85,7 +85,7 @@ commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
 stmt = typeDef | ruleDef | analysisStmt | blankStmt | commentStmt
 program = OneOrMore(stmt)
 component << (term ^ varName ^ func ^ struct)
-arg << (component ^ expression ^ equation ^ struct)
+arg << (component ^ expression ^ equation ^ struct ^ constraint)
 arglist << (LPA + Optional(arg + ZeroOrMore(COMMA + arg)) + RPA)
 expression << ((Optional(BS) + component +
     ZeroOrMore(operator + expression)) ^ (LPA + expression + RPA))
