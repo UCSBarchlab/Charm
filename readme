@@ -1,6 +1,5 @@
-Charm
+Charm [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/TanyaAdams1/Charm/interactive)
 =====
-
 ### Dependencies
 
 numpy (v1.12.1)
