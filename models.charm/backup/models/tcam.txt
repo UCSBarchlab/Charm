@@ -1,0 +1,22 @@
+define tcam_model:
+    # reference: https://www.cs.ucsb.edu/~sherwood/pubs/ISPASS-tcampower.pdf
+    dynamic_power: R+ as dp
+    eq_capacitance: R+ as ceq     # equivalent capacitance (search+read/write)
+    supply_voltage: R+ as vdd     # voltage supply
+    activity_factor: R+ as af     # total switching activity over a period of time (<1)
+    freq: R+ as f                 # operating frequency
+    c_matchline: R+ as c_m        # (in fF) capacitance of a matchline
+    c_searchline: R+ as c_s       # (in fF) capacitance of a searchline
+    c_metal_wire_per_cell: R+ as c_mwps   # metal wire capacitance per TCAM cell
+    c_drain_compare_T: R+ as c_dct  # drain capacitance of NMOS compare transistor
+    l: R+ as l                    # number of bits
+    c_nandinv_gate: R+ as c_nand  # gate capacitance of nand gate and inverter
+    c_precharge: R+ as c_pre      # capacitance of the precharge circuit
+    c_driver: R+ as c_d           # capacitance of the driver circuit
+    c_gate_compare_T: R+ as c_gct # gate capacitance of the NMOS compare transistor
+    r: R+ as r                    # number of rows
+
+    c_m = (c_mwpc + 2 * c_dct) * l + c_nand + c_pre
+    c_s = (c_mwpc + c_gct) * r + c_d
+    dp = ceq * vdd**2 * af * f
+    c_eq = c_m + c_s

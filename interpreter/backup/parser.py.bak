@@ -3,11 +3,12 @@ import warnings
 
 from pyparsing import *
 
-from Charm.utils.charm_options import *
 from .interpreter import *
+from Charm.utils.charm_options import *
 
 ParserElement.setDefaultWhitespaceChars(' ')
-
+COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
+NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
 
 args = None
 
@@ -15,8 +16,9 @@ indentStack = [1]
 imported = []
 
 
+
 class Program:
-    def __init__(self, source, args=None):
+    def __init__(self, source, verbose=False):
         all_names = '''
         typeDef
         ruleDef
@@ -25,16 +27,7 @@ class Program:
         solveStmt
         importStmt
         '''.split()
-        COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
-        NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
-        # Convert '=' to Eq in piecewise function, otherwise sympy cannot parse correctly.
-        source = COND_EQ.sub(lambda p: ', Eq(' + p.group(1) + ', ' + p.group(2) + '))', source)
-        # Convert '.' expresion to custom name clone extension
-        # because sympy cannot accept '.' in variable names.
-        source = NAME_EXT.sub(lambda p: p.group(1) + Names.clone_ext + \
-                                        Names.clone_ext.join(p.group(2).split('.')), source)
-        self.imported = []
-        self.args = args
+
         COLON = Literal(':').suppress()
         COMMA = Literal(',')
         LPA = Literal('(')
@@ -168,8 +161,9 @@ class Program:
             return
 
         def do_importStmt(s, l, t):
+            global imported
             res = t.asDict()[Names.import_result_name]
-            if res[Names.import_path] in self.imported:
+            if res[Names.import_path] in imported:
                 warnings.warn(
                     """
                     Duplicate import
@@ -179,26 +173,9 @@ class Program:
                 # TODO develop a uniform way of mention syntax errors and warnings
                 return
             try:
-                self.imported.append(res[Names.import_path])
+                imported.append(res[Names.import_path])
                 src = open(res[Names.import_path] + '.charm', 'r').read()
-                _imported = Program(src)
-                types = _imported.type_nodes
-                rules = _imported.rule_nodes
-                if Names.import_modules in res and not '*' in list(res[Names.import_modules]):
-                    _rules = rules
-                    rules = []
-                    for name in list(res[Names.import_modules]):
-                        for rule in _rules:
-                            if rule.name == name:
-                                rules.append(rule)
-                                break
-                if Names.import_alias in res:
-                    for i in range(min(len(res[Names.import_modules]), len(res[Names.import_alias]))):
-                        rules[i].name = res[Names.import_alias][i]
-                self.rule_nodes += rules
-                self.type_nodes += types
-                self.ast_nodes += types + rules
-            except Exception as e:
+            except IOError as e:
                 raise SyntaxError(
                     """
                     Fatal error: import file failed(error message:{})
@@ -206,6 +183,25 @@ class Program:
                     
                     """.format(e, s)
                 )
+            _imported = Program(src)
+            types = _imported.type_nodes
+            rules = _imported.rule_nodes
+            if Names.import_modules in res and not '*' in list(res[Names.import_modules]):
+                _rules = rules
+                rules = []
+                for name in list(res[Names.import_modules]):
+                    for rule in _rules:
+                        if rule.name == name:
+                            rules.append(rule)
+                            break
+            if Names.import_alias in res:
+                for i in range(min(len(res[Names.import_modules]), len(res[Names.import_alias]))):
+                    rules[i].name = res[Names.import_alias][i]
+            self.rule_nodes += rules
+            self.type_nodes += types
+            self.ast_nodes += types + rules
+            # parsed_statement = import_statement.parseString(s).asDict()
+
         for name in all_names:
             ex = vars(self)[name]
             action = vars()['do_' + name]
@@ -214,8 +210,11 @@ class Program:
         try:
             self.program.parseString(source, parseAll=True)
         except ParseException as err:
-            logging.fatal("Fatal error:\n{}\n{}\n{}".format(err.line, " " * (err.column - 1) + "^", err))
-            raise
+            print("Fatal error:")
+            print(err.line)
+            print(" " * (err.column - 1) + "^")
+            print(err)
+            quit(-1)
 
     def run(self):
         class _Nodes(object):
@@ -227,10 +226,10 @@ class Program:
                     n.dump()
 
         program = _Nodes(self.ast_nodes)
-        interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples)
+        interp = Interpreter(program, args.z3core, args.draw, args.mcsamples)
         # interp.test_gc_overhead()
-        result = interp.run()
-        return result
+        interp.run()
+        return
 
 
 def main():
@@ -243,8 +242,13 @@ def main():
     with open(args.source, 'r') as src_file:
         src = src_file.read()
         src_file.close()
-
-    program = Program(src, args)
+    # Convert '=' to Eq in piecewise function, otherwise sympy cannot parse correctly.
+    src = COND_EQ.sub(lambda p: ', Eq(' + p.group(1) + ', ' + p.group(2) + '))', src)
+    # Convert '.' expresion to custom name clone extension
+    # because sympy cannot accept '.' in variable names.
+    src = NAME_EXT.sub(lambda p: p.group(1) + Names.clone_ext + \
+                                 Names.clone_ext.join(p.group(2).split('.')), src)
+    program = Program(src, args.verbose)
     program.run()
 
 

@@ -1,15 +1,13 @@
 """ Core graph stuctures of Charm.
 """
 
-from collections import deque
-from copy import copy, deepcopy
-
+import logging
 import matplotlib.pyplot as plt
 import networkx as nx
+from abstract_syntax_tree import *
+from collections import deque
+from copy import copy, deepcopy
 from networkx.drawing.nx_agraph import graphviz_layout
-
-from .abstract_syntax_tree import *
-
 
 # A lattice for node type:
 #   Top
@@ -33,7 +31,6 @@ class NodeType(object):
         assert nt < NodeType.INVALID
         return NodeType.__printables[nt]
 
-
 class GraphEdge(IdObject):
     """ An edge can be either directed or undirected.
 
@@ -53,7 +50,7 @@ class GraphEdge(IdObject):
             assert (src is node1 and dst is node2) or (src is node2 and dst is node1)
         else:
             assert not src and not dst, \
-                'Bad graph edge ({}->{})'.format(self.src.id, self.dst.id)
+                    'Bad graph edge ({}->{})'.format(self.src.id, self.dst.id)
 
     def set(self, src, dst, fixed=False):
         # If an edge is fixed, it cannot be set/reset.
@@ -84,8 +81,7 @@ class GraphEdge(IdObject):
         """ Equality exists when the nodes are the same, no matter directed or not.
         """
         return (self.node1 is rhs.node1 and self.node2 is rhs.node2) or \
-               (self.node1 is rhs.node2 and self.node2 is rhs.node1)
-
+                (self.node1 is rhs.node2 and self.node2 is rhs.node1)
 
 class GraphNode(Node):
     def __init__(self, node_type, val):
@@ -112,15 +108,14 @@ class GraphNode(Node):
 
     def getPrintable(self):
         return '{} ({})\n\t{}'.format(self.val if (self.getType() == NodeType.INPUT or
-                                                   self.getType() == NodeType.VARIABLE) else self.val.str,
-                                      NodeType.getPrintable(self.getType()),
-                                      '\n\t'.join([e.getPrintable() for e in self.edges]))
+            self.getType() == NodeType.VARIABLE) else self.val.str,
+            NodeType.getPrintable(self.getType()), '\n\t'.join([e.getPrintable() for e in self.edges]))
 
-    def dump(self, **kwargs):
-        logging.info('GraphNode {} {}:'.format(self.id, 'marked' if self.marked else ''))
-        logging.info('\t{}'.format(self.getPrintable()))
-        logging.info('\tgiven: {}'.format(self.ordered_given))
-        logging.info('\tproped: {}'.format(self.proped))
+    def dump(self):
+        logging.debug('GraphNode {} {}:'.format(self.id, 'marked' if self.marked else ''))
+        logging.debug('\t{}'.format(self.getPrintable()))
+        logging.debug('\tgiven: {}'.format(self.ordered_given))
+        logging.debug('\tproped: {}'.format(self.proped))
 
     def clone(self, ext, ext_set):
         """ Make a clone of the current node with ext, given the entire ext_set in the graph.
@@ -157,10 +152,9 @@ class GraphNode(Node):
                 if nn.getType() == NodeType.VARIABLE and nn.exts[-1] == ext:
                     ext_names.append(nn.val)
             dummy_edges = [e for e in node.edges if (node.next(e).getType() == NodeType.VARIABLE and
-                                                     node.next(e).exts[-1] != ext) or (
-                                   node.next(e).getType() == NodeType.INPUT and
-                                   (set(node.next(e).exts) & ext_set) and
-                                   (set(node.next(e).exts) & ext_set != ext))]
+                node.next(e).exts[-1] != ext) or (node.next(e).getType() == NodeType.INPUT and
+                    (set(node.next(e).exts) & ext_set) and
+                    (set(node.next(e).exts) & ext_set != ext))]
             for e in dummy_edges:
                 nn = node.next(e)
                 node.removeEdge(e)
@@ -188,6 +182,7 @@ class GraphNode(Node):
 
     def removeEdge(self, edge):
         assert edge in self.edges
+        #print 'Remove {} on {}'.format(edge.getPrintable(), self.id)
         self.edges.remove(edge)
 
     def getFlexibleEdges(self):
@@ -217,7 +212,8 @@ class GraphNode(Node):
             assert t == NodeType.CONSTRAINT
             self.type = t
         else:
-            raise ValueError('Cannot set node type from {} to {}'.format(self.type, t))(self.getPrintable())
+            raise ValueError('Cannot set node type from {} to {}'.format(self.type, t)), \
+                    self.getPrintable()
 
     def getType(self):
         return self.type
@@ -254,27 +250,29 @@ class GraphNode(Node):
                 return True, indegree
         return False, None
 
-
 class Graph(object):
     def __init__(self, drawable=False):
-        self.node_set = []
-        self.edge_set = []
+        self.node_set = set()
+        self.edge_set = set()
         self.drawable = drawable
 
     def addNode(self, node):
         assert node not in self.node_set
-        self.node_set.append(node)
+        self.node_set.add(node)
 
     def removeNode(self, node):
         assert node in self.node_set
         edges = copy(node.edges)
+        #for e in edges:
+        #    print '\t{}'.format(e.getPrintable())
         for e in edges:
             self.removeEdge(e)
         self.node_set.remove(node)
+        #print 'Remove [{}]'.format(node.id)
 
     def addEdge(self, edge):
         assert edge not in self.edge_set
-        self.edge_set.append(edge)
+        self.edge_set.add(edge)
 
     def removeEdge(self, edge):
         """ When removing edge, remove from both endpoints.
@@ -287,7 +285,7 @@ class Graph(object):
     def addEdges(self, edges):
         for edge in edges:
             assert not edge in self.edge_set
-            self.edge_set.append(edge)
+            self.edge_set.add(edge)
 
     def getUnmarkedNode(self):
         for n in self.node_set:
@@ -364,11 +362,10 @@ class Graph(object):
                     n.proped[e.src.out_name] = e.src.out_val
             if set(n.proped.keys()) == set(n.ordered_given):
                 logging.debug('Eval Con with {}\nResult: {}'.format(
-                    n.proped, n.func(**n.proped)))
+                    n.proped, n.func(**(n.proped))))
                 pass
-
             if set(n.proped.keys()) < set(n.ordered_given) or not n.func(**(n.proped)):
-                logging.debug('VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped))
+                print 'VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped)
                 return False
         return True
 
@@ -377,12 +374,12 @@ class Graph(object):
         """
         for e in self.edge_set:
             assert e.isDirected(), \
-                'Still has unlabeled edge {}->{}'.format(e.node1, e.node2)
+                    'Still has unlabeled edge {}->{}'.format(e.node1, e.node2)
 
         for n in self.node_set:
             has_conflict = n.has_conflict()[0]
             if has_conflict:
-                logging.log(logging.FATAL, 'Conflict detected at node:\n{}'.format(n.getPrintable()))
+                print 'Conflict detected at node:\n{}'.format(n.getPrintable())
             assert not has_conflict
 
     def draw(self, path='DAG', show=False):
@@ -410,7 +407,7 @@ class Graph(object):
                 G.add_edge(e.node1, e.node2)
         pos = graphviz_layout(G, prog='dot')
         nx.draw_networkx(G, pos, arrows=True, with_labels=False, alpha=.5,
-                         node_color=[node.type for node in G.nodes()])
+                node_color=[node.type for node in G.nodes()])
         nx.draw_networkx_labels(G, pos, labels, font_size=8)
         plt.axis('off')
         plt.savefig(path, dpi=200) if not show else plt.show()

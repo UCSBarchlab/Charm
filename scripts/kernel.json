@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "Charm.charm_jupyter_kernel",
+    "-f",
+    "{connection_file}"
+  ],
+  "display_name": "Charm",
+  "language": "python"
+}

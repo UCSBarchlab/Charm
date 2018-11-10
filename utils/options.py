@@ -1,5 +1,7 @@
 import argparse
 import logging
+from Charm.models import MathModel
+from Charm.models import RiskFunctionCollection
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -30,6 +32,30 @@ def addCompilerOptions(parser):
             help='Use Z3 as core engine.')
     parser.add_argument('--mcsamples', type=int, action='store', default=100,
             help='Number of samples to use for uncertain variables.')
+
+def addModelOptions(parser):
+    parser.add_argument('--math-model', action='store', dest='math_model',
+            default='symmetric', choices=MathModel.names(),
+            help='Select math model to use.')
+    parser.add_argument('--risk-func', action='store', dest='risk_func',
+            default='linear', choices=RiskFunctionCollection.funcs,
+            help='Select risk model to use.')
+    parser.add_argument('--trans', action='store_true', dest='trans', default=False,
+            help='Use transformed Gaussian as inputs.')
+    parser.add_argument('--use-power', action='store_true', dest='use_power',
+            default=False, help='use power equations.')
+
+def addApplicationOptions(parser):
+    parser.add_argument('--f', action='store', type=float, default=.9,
+            help='Set f value.')
+    parser.add_argument('--c', action='store', type=float, default=.01,
+            help='Set c value.')
+
+def addRegressionOptions(parser):
+    parser.add_argument('--fc-file', action='store', dest='fc_file', default=None,
+            help='filepath to empirical workload for fc regression.')
+    parser.add_argument('--cpudb-dir', action='store', dest='cpudb_dir', default=None,
+            help='path to cpudb directory.')
 
 def addIOOptions(parser):
     parser.add_argument('--save-path', action='store', default=None,

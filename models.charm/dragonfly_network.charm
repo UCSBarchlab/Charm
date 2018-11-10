@@ -28,15 +28,16 @@ define Dragonfly:
     g_c = (1 + (1 + 4 * S_desired) ** .5) / 2
     
     h = Max(0, floor(1 + d * (g - 2)))
-    g = Piecewise((ceiling(1 + (b + 1) * (g_c - 1)), b < 0), (ceiling(S_desired / a), b >= 0))
-    a = Piecewise((ceiling(S_desired / g), b < 0), (ceiling(1 + (1 - b) * (a_c - 1)), b >= 0))
+    #g = Piecewise((ceiling(1 + (b + 1) * (g_c - 1)), b < 0), (ceiling(S_desired / a), b >= 0))
+    #a = Piecewise((ceiling(S_desired / g), b < 0), (ceiling(1 + (1 - b) * (a_c - 1)), b >= 0))
+    g = ceiling(1 + (b + 1) * (g_c - 1))
+    a = ceiling(S_desired / g)
     
 
     #g > 1    
     #a * g >= S_desired
 
 given Dragonfly
-assume b = -0.5
-assume d = 1
+assume b = [-1, -0.5]
 assume S_desired = 1000
 explore a, g, h, g_canonical

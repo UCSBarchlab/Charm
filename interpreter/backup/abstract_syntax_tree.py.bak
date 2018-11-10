@@ -1,6 +1,4 @@
-import logging
 import re
-from random import uniform
 from sys import stderr
 
 from pint import UnitRegistry, DimensionalityError
@@ -72,9 +70,6 @@ class IdObject(object):
     def __init__(self):
         self.id = IdObject.iid
         IdObject.iid += 1
-
-    def __hash__(self):
-        return object.__hash__(self)
 
 
 class Node(IdObject):
@@ -283,9 +278,9 @@ class RuleNode(Node):
                             raise ValueError('Unsat equation: {} in rule {}'.format(
                                 ''.join(flatten), self.name))
                         else:
-                            logging.warning('WARNING: infinitely underdetermined equation' \
-                                            'ignored: {} in rule "{}"'.format(
-                                ''.join(flatten), self.name))
+                            print 'WARNING: infinitely underdetermined equation' \
+                                  'ignored: {} in rule "{}"'.format(
+                                ''.join(flatten), self.name)
                 else:
                     self.equations.append(Relation(flatten, self.a2n, self.n2u))
                     # self.use.update([self.a2n[a] for a in extract_variables(eq_str)])
@@ -295,7 +290,7 @@ class RuleNode(Node):
 
 
 class AssumeNode(Node):
-    """ Assumed models.charm.
+    """ Assumed models.
     """
 
     def __init__(self, toks):
@@ -333,7 +328,7 @@ class LetNode(Node):
         dump_str = indent + '[{}] LetNode:\n'.format(self.id)
         dump_str += indent + '\t{} ({}) <- {} ({})\n'.format(self.lstr, self.lvar, self.rstr, self.rset)
         if printable:
-            print(dump_str)
+            print dump_str
         return dump_str
 
     def parse(self):
@@ -373,7 +368,7 @@ class SolveNode(Node):
         for t in self.targets:
             dump_str += indent + '\t{}\n'.format(t)
         if (printable):
-            print(dump_str)
+            print dump_str
         return dump_str
 
     def parse(self):
@@ -427,20 +422,19 @@ class Relation(Node):
             if name in Names.builtin:
                 unit_expression = unit_expression.replace(name, '', 1)
             elif name in self.names:
-                unit_expression = unit_expression.replace(' ' + name + ' ',
-                                                          ' ' + str(n2u[name].units) + '*{} '.format(uniform(1, 10)))
+                unit_expression = unit_expression.replace(' ' + name + ' ', ' ' + str(n2u[name].units) + ' ')
         unit_expression = unit_expression.replace('=', '-')
         try:
             ureg.parse_expression(unit_expression)
-        except DimensionalityError as e:
-            logging.error("Units incompatible in equation {}\nError message:{}".format(self.orig, e), file=stderr)
+        except DimensionalityError, e:
+            print >> stderr, "Units incompatible in equation {}\nError message:{}".format(self.orig, e)
 
     def subs(self, ext_name):
         base_name = ext_name[:ext_name.find(Names.clone_ext)]
         assert base_name in self.names and not ext_name in self.names, ext_name
         self.names.remove(base_name)
         self.names.add(ext_name)
-        for i in range(len(self.toks)):
+        for i in xrange(len(self.toks)):
             if self.toks[i] == base_name:
                 self.toks[i] = ext_name
         self.str = ''.join(self.toks)
@@ -448,5 +442,5 @@ class Relation(Node):
     def dump(self, indent='', printable=True):
         dump_str = indent + self.str + '\n'
         if printable:
-            print(dump_str)
+            print dump_str
         return dump_str

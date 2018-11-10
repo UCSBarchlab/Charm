@@ -1,0 +1,114 @@
+# Ref: https://ieeexplore.ieee.org/abstract/document/5090700/
+
+typedef I+ : int i
+	i > 0
+
+typedef R+ : float r
+	r > 0
+
+define power_modeling:
+	# Clock 
+	C_clk : R+ # capacitive load of the clock distribution
+	C_sram_fifo : R+ # capacitive load due to memory structures
+	C_pipeline_registers : R+ # capacitive load due to pipeline registers
+	C_register_fifo : R+ # capacitive load due to FIFO registers
+	C_wiring : R+ # capacitive load due to clock distribution wiring
+ 	C_chg : R+ # pre-charging circuit (single PMOS) capacitance
+	Cg_Tc : R+ # gate capacitance
+	Cd_Tc : R+ # drain end capacitance
+	Pr : I+	# number of read ports
+	Pw : I+ # number of write ports
+	B : I+ # number of buffers
+	F : I+ # flit size (bits)
+	N_pipeline : I+ # number of pipeline stages
+	C_ff : R+ # flip-flop capacitance
+	D : R+ # chip dimension
+	C_int : R+ # per-unit length wire capacitance
+	# Register-Based FIFO Buffers
+	E_write : R+ # write energy
+	E_read : R+ # read energy
+	H : R+ # average switching activity 
+	E_ff_switch : R+ # energy to switch one bit
+	n : I+ # number of flits before the read operation
+	# Physical Link
+	P_link : R+ # link dynamic power
+	a : R+ # activity factor	
+	Cl : R+ # load capacitance
+	V_dd : R+ # supply voltage
+	f_clk : R+ # frequency
+	C_in : R+ # input capacitance of the next repeater
+	C_gnd : R+ # ground capacitance of the wire driven
+	C_cc : R+ # coupling capacitance of the wire driven
+
+	# Clock
+	C_clk = C_sram_fifo + C_pipeline_registers + C_register_fifo + C_wiring # Eq.1
+	C_chg = Cg_Tc + Cd_Tc # Eq.2
+	C_sram_fifo = (Pr + Pw) * F * B * C_chg # Eq.3
+	C_pipeline_registers = N_pipeline * F * C_ff # Eq.4
+	C_register_fifo = F * B * C_ff # Eq.5
+	C_wiring = ((16/2)*D + (1*8/2)*D + (2*4/2)*D + (4*2/2)*D + (8*1/2)*D) * C_int # Eq.6
+	# Register-Based FIFO Buffers
+	E_write = H * E_ff_switch # Eq.8
+	E_read = (n-1) * E_write # Eq.9
+	# Physical Link 
+	P_link = a * Cl * (V_dd**2) * f_clk # Eq.10
+	Cl = C_in + C_gnd + C_cc # Eq.11
+
+define area_modeling:
+	# Gate Area
+	N_folded_transistor : I+ # number of folded transistors
+	W_diffusion_area_t_not_folded : R+ # total diffusion width of N_stacked transistors when they are not folded
+	W_diffusion_area_t_folded : R+ # total diffusion width of N_stacked transistors when they are folded
+	Wn : R+ # width of an NMOS
+	H_gate : R+ # height of a gate
+	Hn_diff : R+ # max height of n-diffusion
+	Hp_diff : R+ # max height of p-diffusion
+	H_gap_opp : R+ # min gap between n and p diffusions
+	H_power_rail : R+ # height of V_dd and V_ss rails
+	W_contact : R+ # contact width	
+	S_pc : R+ # min poly-to-contact spacing
+	N_stacked : I+ # number of stacked transistors
+	W_poly : R+ # min width of poly
+	S_pp : R+ # min poly-to-poly spacing
+	# Router Area
+	L_word_line : R+ # word line length of the FIFO
+	L_bit_line : R+ # bit line length of the FIFO
+	Area_fifo : R+ # the total area for a B entry buffer with flit size of F
+	Area_link : R+ # wire area		
+	Pr : I+ # number of read ports
+        Pw : I+ # number of write ports
+        B : I+ # number of buffers
+        F : I+ # flit size (bits)
+	w_cell : R+ # memory cell width
+	h_cell : R+ # memory cell height
+	d_w : R+ # wire spacing
+	w_w : R+ # wire width
+	s_w : R+ # spacing
+
+	# Gate Area
+	N_folded_transistor = ceiling(Wn / Hn_diff) # Eq.21
+	W_diffusion_area_t_not_folded = 2 * (W_contact + 2 * S_pc) + N_stacked * W_poly + (N_stacked - 1) * S_pp # Eq.22
+	W_diffusion_area_t_folded = N_folded_transistor * (2 * (W_contact + 2 * S_pc) + N_stacked * W_poly + (N_stacked - 1) * S_pp) # Eq.23
+	H_gate = Hn_diff + Hp_diff + H_gap_opp + 2 * H_power_rail # Eq.24
+	# Router Area
+	L_word_line = F * (w_cell + 2 * (Pr + Pw) * d_w) # Eq.25
+	L_bit_line = B * (h_cell + (Pr + Pw) * d_w) # Eq.26	
+	Area_fifo = L_word_line * L_bit_line # Eq.27
+	Area_link = F * (w_w + s_w) + s_w # Eq.28
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,13 +1,12 @@
 import collections
+import re
+import z3
+from sympy import symbols, numbered_symbols, IndexedBase, Idx, Function, DeferredVector
+from sympy.parsing.sympy_parser import parse_expr, _token_splittable, convert_equals_signs, split_symbols_custom, auto_symbol
 
 # Workaround for Sympy not lambdifying Product correctly, ref:
 # https://stackoverflow.com/questions/37846492/sympy-cannot-lambdify-product
 import sympy.printing.lambdarepr as SPL
-import z3
-from sympy import symbols, IndexedBase, Function
-from sympy.parsing.sympy_parser import parse_expr, convert_equals_signs, auto_symbol
-
-
 def _print_Product(self, expr):
     loops = (
         'for {i} in range({a}, {b}+1)'.format(
