@@ -1,4 +1,5 @@
-Charm
+Charm 
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/TanyaAdams1/Charm/interactive)
 =====
 
 Charm is an interpreted DSL and runtime for writing/managing
