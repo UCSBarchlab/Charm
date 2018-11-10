@@ -1,7 +1,0 @@
-# Ref 1: http://www.cs.virginia.edu/~skadron/Papers/huang_bigchips_micro11_preprint.pdf
-define power_density_scale:
-    core_power : R+ as power
-    power_scale_factor : R+ as a
-    tech_node : I+ as t
-    a = Piecewise((1., t=45), (1.096, t=32), (1.096*1.135, t=22), (1.096*1.135*1.162, t=14), (1.096*1.135*1.162*1.175, t=10))
-    power = a * (0.19*1000000) # W/m2
