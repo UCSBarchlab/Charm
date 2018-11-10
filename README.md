@@ -9,7 +9,7 @@ Charm will be presented at ISCA'18 @ LA, CA.
 
 ### Prerequisites
 
-Python (v2.7.12)
+Python (v3.6)
 
 pyparsing (v2.2.0)
 
