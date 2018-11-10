@@ -22,7 +22,7 @@ class RegisterKernel(install):
         if kernel_directory.exists():
             rmtree(kernel_directory)
         kernel_directory.mkdir(parents=True)
-        original_kernel_file = Path(__file__).parent / "scripts" / "kernel.json"
+        original_kernel_file = Path(__file__).parent / "Charm" / "scripts" / "kernel.json"
         copy(str(original_kernel_file), kernel_directory)
 
 
