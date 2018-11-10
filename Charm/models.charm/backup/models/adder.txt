@@ -1,0 +1,50 @@
+typedef R+ : float r
+    r > 0
+
+typedef I+ : int i
+    i > 0
+
+# Ref 1: http://www.cs.virginia.edu/~skadron/Papers/huang_bigchips_micro11_preprint.pdf
+define power_model:
+    adder_power : R+ as power
+    adder_period_ps : R+ as delay
+    adder_area : R+ as area
+    adder_energy : R+ as enr
+    power_density : R+ as pd
+    pd_scale_factor : R+ as a
+    gen : R+ as g
+    technode : I+ as t
+    #a = Piecewise((1., t=45), (1.096, t=32), (1.096*1.135, t=22), (1.096*1.135*1.162, t=14), (1.096*1.135*1.162*1.175, t=10))
+    g = (45 / t) ** 2
+    a = 1.054 ** g
+    pd = a * 0.19 # W/mm2
+    power = pd * area
+    enr = power * (delay / 10**12)
+
+define adder_model:
+    # Defined elsewhere: adder_bitwidth and technode
+    # Computes: adder_area, adder_period_ps
+    adder_bitwidth: I+ as w
+    adder_tracks: R+ as t
+    adder_length: R+ as l
+    adder_area130: R+ as a130
+    technode: I+ as tn
+    adder_scale: R+ as s
+    adder_area: R+ as a
+    
+    t = w * 34.4 - 25.8		   # total tracks
+    l = t * 8 * 55 		   # total length
+    a130 = (l * 72 * 55) / 10**12  # each track is 72 lambda, convert from nm2 to mm2
+    s = tn / 130     	   	   # scale factor from 130
+    a = (a130) * s**2	   	   # area in given tech node
+
+    adder_cp_length: R+ as cp		   
+    adder_period_ps: R+ as clkp
+    
+    cp = 184 * log(w, 2) + 18.9	   # critical path length of one adder
+    clkp = s * (cp + 189 + 194)	   # clock period in ps with set up and hold times
+
+given adder_model, power_model
+assume adder_bitwidth = 16
+assume technode = 32
+explore adder_period_ps, adder_area, adder_power, adder_energy

@@ -1,0 +1,18 @@
+# mechanistic model for out-of-order superscalar
+# ref:  http://users.elis.ugent.be/~leeckhou/papers/tocs09.pdf
+# "A mechanistic performance model for superscalar out-of-order processors"
+
+define total_cycle_time:
+    Ntotal: I+ # total dynamic instruction count
+    D: I+         # dispatch width
+    miL1: I+      # number of L1 I-cache miss events
+    miL2: I+      # number of L2 I-cache miss events
+    ciL1: I+      # miss delay for L1 I-cache miss
+    cL2: I+       # miss delaye for L2 D-cache miss
+    mbr: I+       # number of branch miss predictions
+    m_*dL2: I+    # number of non-overlapping long L2 D-cache misses
+    W: I+         # window size
+    cdr: I+       # window drain time in cycles
+    cfe: I+       # front-end pipeline length
+    total_cycle_time: I+ as c
+    c = (Ntotal/D) +  ((D-1)/2*D) * (miL1 + miL2 + mbr + m_*dL2(W)) + miL1*ciL1 + miL2*cL2 + mbr*(cdr+cfe) + m_*dL2(w).cL2

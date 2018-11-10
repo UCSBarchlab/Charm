@@ -1,0 +1,21 @@
+def multiplier_model:
+    # Defined elsewhere: multiplier_bitwidth and technode
+    # Computes: multiplier_area, multplier_period_ps
+    multiplier_bitwidth: I+ as w
+    multiplier_tracks: R+ as t
+    multiplier_length: R+ as l
+    multiplier_area130: R+ as a130
+    technode: I+ as tn
+    multplier_scale: R+ as s
+    multiplier_area: R+ as a    
+
+    t = Piecewise((5, w == 1), (39, w == 2), (219, w == 3), (-958 + (150 * w) + (45 * w**2), w > 3))
+    l = t * 8 * 55 		   # total length
+    a130 = (l * 72 * 55) / 10**12  # each track is 72 lambda, convert from nm2 to mm2
+    a = (a130) * s**2	   	   # area in given tech node
+
+    multplier_cp_length: R+ as cp		   
+    multplier_period_ps: R+ as clkp
+    
+    cp = 184 * log(w, 2) + 18.9	   # critical path length of one adder
+    clkp = s * (cp + 189 + 194)	   # clock period in ps with set up and hold times
