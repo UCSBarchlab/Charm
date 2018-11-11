@@ -11,6 +11,13 @@ typedef Fraction : float f
     f >= 0
     f <= 1
 
+define poisson_yield_model:
+    alpha : R+ as a
+    defect : R+ as d
+    A : I+
+    yield : Fraction
+    yield = (1 + d * A / a) ** (-1. * a)
+
 define amdahl_law:
     speedup : R+ as sp
     serial_execution_time : R+ as st
@@ -27,23 +34,30 @@ define hill_marty:
     N_total : I+
     N_types : I+
     DN[] : NatI
+    D[] : NatI
     A[] : R+
     P[] : R+
+    yield[] : Fraction
     total_area : R+ as A_total
+    performance_sigma : R+ as sigma_p
+    design_sigma : R+ as sigma_d
     
     t_s = (1 - f + c * N_total) / p_s
     t_p = f / p_p
     p_s = max(P[i] | DN[i] > 0)
-    p_p = Sum(DN[i] * P[i], (i, 0, N_types))
-    N_total = Sum(DN[i], (i, 0, N_types))
+    p_p = Sum(D[i] * P[i], (i, 0, N_types))
+    N_total = Sum(D[i], (i, 0, N_types))
     A_total >= Sum(A[i] * DN[i], (i, 0, N_types))
-    P = A ** .5
+    P = Gauss(A ** .5, sigma_p * (A ** .5), 0) * Bernoulli(sigma_d)
+    D = Binomial(DN, yield)
 
 given amdahl_law, hill_marty
 assume A[] = list((1., 8., 16., 32., 64., 128., 256.))
 assume DN[] = list((0, 0, 0, 0, 0, 1, 0))
 assume N_types = 6
-assume fraction_parallelism = Gauss(0.999, 0.001)
-assume unit_communication_cost = 0.001
+assume fraction_parallelism = Gauss(0.999, 0.099, 0, 1)
+assume unit_communication_cost = Gauss(0.001, 0.0001, 0)
+assume performance_sigma = 0.1
+assume design_sigma = 0.2 * performance_sigma 
 assume total_area = 256.0
 explore speedup 
