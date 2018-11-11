@@ -1,0 +1,50 @@
+typedef R+ : float r
+    r > 0
+
+typedef I+ : int i
+    i > 0
+
+define physical_constants:
+    kBoltzmann : R+ as k
+    kCharge : R+ as q
+    1.381 * (10 ** -23) = k
+    q = 1.602 * (10 ** -19) 
+
+# Ref 1: http://www-inst.eecs.berkeley.edu/~ee40/fa03/lecture/lecture39.pdf
+define capacitance_scaling_model:
+    tech_node : I+ as t
+    capacitance_per_transistor : R+ as C_L
+    capacitance_130nm : R+ as C
+    scaling_generations : I+ as S
+    C_L = Piecewise((C, t=130), (C * .7, t=110)) 
+
+# Ref 1: https://software.intel.com/en-us/blogs/2009/08/25/why-p-scales-as-cv2f-is-so-obvious-pt-2-2
+# Ref 2: http://www.siliconintelligence.com/people/binu/perception/node13.html
+define dynamic_power_model:
+    capacitance_per_transistor : R+ as C_L
+    gate_voltage : R+ as V_dd
+    clock_frequency : R+ as F
+    activity_factor : R+ as A
+    number_of_transistors : I+ as N
+    dynamic_power : R+ as P
+    P = .5 * C_L * (V_dd ** 2) * A * F * N
+
+# Ref: https://en.m.wikipedia.org/wiki/Shockley_diode_equation?wprov=sfla1
+# Ref: http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7516023
+define leakge_power_model:
+    reverse_saturation_current : R+ as I_s
+    thermal_voltage : R+ as V_t
+    kIdeality : R+ as n
+    leakage_current : R+ as I
+    supply_voltage : R+ as V_cc
+    leakage_power : R+ as P
+    I = I_s * (exp(V_cc / (n * V_t)) - 1)
+    P = I * V_cc
+
+# Ref: https://en.m.wikipedia.org/wiki/Shockley_diode_equation?wprov=sfla1
+define thermal_voltage_model:
+    kBoltzmann : R+ as k
+    kCharge : R+ as q
+    thermal_voltage : R+ as V_t
+    temperature : R+ as T
+    V_t * q = k * T

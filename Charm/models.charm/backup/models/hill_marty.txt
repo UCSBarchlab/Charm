@@ -1,0 +1,49 @@
+typedef I+ : int i
+    i > 0
+
+typedef NatI : int i
+    i >= 0
+
+typedef R+ : float r
+    r > 0
+
+typedef Fraction : float f
+    f >= 0
+    f <= 1
+
+define amdahl_law:
+    speedup : R+ as sp
+    serial_execution_time : R+ as st
+    parallel_execution_time : R+ as pt
+    sp = 1 / (st + pt)
+
+define hill_marty:
+    serial_execution_time : R+ as t_s
+    parallel_execution_time : R+ as t_p
+    fraction_parallelism : Fraction as f
+    unit_communication_cost : R+ as c
+    serial_performance : R+ as p_s
+    parallel_performance : R+ as p_p
+    N_total : I+
+    N_types : I+
+    DN[] : NatI
+    A[] : R+
+    P[] : R+
+    total_area : R+ as A_total
+    
+    t_s = (1 - f + c * N_total) / p_s
+    t_p = f / p_p
+    p_s = max(P[i] | DN[i] > 0)
+    p_p = Sum(DN[i] * P[i], (i, 0, N_types))
+    N_total = Sum(DN[i], (i, 0, N_types))
+    A_total >= Sum(A[i] * DN[i], (i, 0, N_types))
+    P = A ** .5
+
+given amdahl_law, hill_marty
+assume A[] = list((1., 8., 16., 32., 64., 128., 256.))
+assume DN[] = list((0, 0, 0, 0, 0, 1, 0))
+assume N_types = 6
+assume fraction_parallelism = Gauss(0.999, 0.001)
+assume unit_communication_cost = 0.001
+assume total_area = 256.0
+explore speedup 
