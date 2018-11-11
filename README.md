@@ -1,4 +1,5 @@
-Charm
+Charm 
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/TanyaAdams1/Charm/interactive)
 =====
 
 Charm is an interpreted DSL and runtime for writing/managing
@@ -8,7 +9,7 @@ Charm will be presented at ISCA'18 @ LA, CA.
 
 ### Prerequisites
 
-Python (v2.7.12)
+Python (v3.6)
 
 pyparsing (v2.2.0)
 
@@ -30,12 +31,7 @@ z3 (v4.6.0 with python binding)
 
 ### Example Usage
 
-> **Add Charm/utils directory to the environment variable PYTHONPATH**
-
-
-```
-python interpreter/parser.py models/adder.charm
-```
+**Just click the [![Binder](https://mybinder.org/badge.svg)] button or visit https://mybinder.org/v2/gh/TanyaAdams1/Charm/interactive **
 
 ### Contact & Citation:
 
