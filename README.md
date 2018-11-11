@@ -31,12 +31,7 @@ z3 (v4.6.0 with python binding)
 
 ### Example Usage
 
-> **Add Charm/utils directory to the environment variable PYTHONPATH**
-
-
-```
-python interpreter/parser.py models/adder.charm
-```
+**Just click the [![Binder](https://mybinder.org/badge.svg)] button or visit https://mybinder.org/v2/gh/TanyaAdams1/Charm/interactive **
 
 ### Contact & Citation:
 
