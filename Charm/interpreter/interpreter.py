@@ -1081,10 +1081,6 @@ class Interpreter(object):
         if not consistent_and_determined and not use_smt:
             logging.log(logging.FATAL, 'System underdetermined or inconsistent, ''and not using z3 core, aborting '
                                        'evaluation...')
-        elif consistent_and_determined and not use_smt:
-            self.generate_functions()
-            self.solveDetermined()
-            return self.result
         elif not consistent_and_determined and use_smt:
             logging.log(logging.ERROR,
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
@@ -1096,5 +1092,6 @@ class Interpreter(object):
             #self.optimizeSMT(smt, knobs, k2s = k2s, minimize=False)
             #end = timer()
         else:
-            raise ValueError('Should not be here.')
-        # TODO figure out results for other cases
+            self.generate_functions()
+            self.solveDetermined()
+            return self.result
