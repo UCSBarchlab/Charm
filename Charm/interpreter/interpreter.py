@@ -1088,13 +1088,13 @@ class Interpreter(object):
         elif not consistent_and_determined and use_smt:
             logging.log(logging.ERROR,
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
-            # self.solveSMT()
-            smt = self.constructSMTInstance()
-            knobs = ['computation']
-            k2s = {'computation': 1.0}
-            start = timer()
-            self.optimizeSMT(smt, knobs, k2s = k2s, minimize=False)
-            end = timer()
+            self.solveSMT()
+            #smt = self.constructSMTInstance()
+            #knobs = ['computation']
+            #k2s = {'computation': 1.0}
+            #start = timer()
+            #self.optimizeSMT(smt, knobs, k2s = k2s, minimize=False)
+            #end = timer()
         else:
             raise ValueError('Should not be here.')
         # TODO figure out results for other cases
