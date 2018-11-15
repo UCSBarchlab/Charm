@@ -1,5 +1,6 @@
 import functools
 import itertools
+import logging
 import pickle
 from collections import defaultdict
 from timeit import default_timer as timer
@@ -62,6 +63,7 @@ class Interpreter(object):
         self.v2v = {}  # Variable name to VarNode.
         self.n2t = {}  # Type name to TypeNode.
         self.v2l = {}  # Variable name to LetNode.
+        self.plot_nodes = []  # Plot tasks
         self.stack = deque()
 
     def type_check(self, var, ival):
@@ -797,6 +799,8 @@ class Interpreter(object):
                 if n_free_variables < n_equations:
                     logging.log(logging.ERROR, 'Overdetermined system, free {}, equation {}'.format(
                         n_free_variables, n_equations))
+            elif isinstance(s, PlotNode):
+                self.plot_nodes.append(s)
             else:
                 raise ValueError('Unknown stmt: {}'.format(s.toks))
 
@@ -993,8 +997,10 @@ class Interpreter(object):
             tag = tuple([proped_vals[var] for var in flat_iter_vars])
             smt = SMTInstance(var_map, rel_list + mutable_eqs)
             solution = smt.solve()
+            self.result = {}
             for tar in self.targets:
                 logging.log(logging.DEBUG, 'Result: {} -> {} = {}'.format(tag, tar, solution[tar]))
+                self.result[tar] = solution[tar]
 
     def solveDetermined(self):
         results = defaultdict(list)
@@ -1008,7 +1014,6 @@ class Interpreter(object):
                 for var in k:
                     flat_iter_vars.append(var)
         if flat_iter_vars:
-
             logging.debug("Result {}".format(tuple(flat_iter_vars)))
         already_evaluated = set()
         proped_vals = dict([(k, None) for k in flat_iter_vars])
@@ -1023,7 +1028,6 @@ class Interpreter(object):
         if not iter_vars:
             if self.graph.eval_constraints():
                 for tar in self.targets:
-
                     logging.debug('Result {}: {}'.format(tar, self.v2n[tar].out_val))
         # Handle iterations.
         for t in itertools.product(*tuple(iter_vals)):
@@ -1063,9 +1067,12 @@ class Interpreter(object):
         logging.log(logging.INFO, 'Time used: {}'.format(end - start))
 
     # TODO plotting (optional distinguish different kinds of plot)
+    def __plot(self, node):
+        if node.dependent not in self.targets:
+            logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
+            return
+
     def run(self):
-        #self.test_gc_overhead()
-        # self.program.dump()
         self.link()
         self.gen_inputs()
         self.build_dependency_graph()
@@ -1084,17 +1091,16 @@ class Interpreter(object):
         elif consistent_and_determined and not use_smt:
             self.generate_functions()
             self.solveDetermined()
-            return self.result
         elif not consistent_and_determined and use_smt:
             logging.log(logging.ERROR,
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
             self.solveSMT()
-            #smt = self.constructSMTInstance()
-            #knobs = ['computation']
-            #k2s = {'computation': 1.0}
-            #start = timer()
-            #self.optimizeSMT(smt, knobs, k2s = k2s, minimize=False)
-            #end = timer()
-        else:
-            raise ValueError('Should not be here.')
+        images=[]
+        if self.plot_nodes:
+            for node in self.plot_nodes:
+                images.append(self.__plot(node))
+        return {
+            'raw':self.result,
+            'img':images
+        }
         # TODO figure out results for other cases

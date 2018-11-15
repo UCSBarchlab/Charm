@@ -8,7 +8,6 @@ from .interpreter import *
 
 ParserElement.setDefaultWhitespaceChars(' ')
 
-
 args = None
 
 indentStack = [1]
@@ -24,6 +23,7 @@ class Program:
         assumeStmt
         solveStmt
         importStmt
+        plotStmt
         '''.split()
         COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
         NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
@@ -117,6 +117,13 @@ class Program:
         self.analysisStmt = (self.givenStmt | self.assumeStmt | self.solveStmt) + ENDL
         self.blankStmt = Suppress((LineStart() + LineEnd()) ^ White()).setName('blankStmt')
         self.commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
+        plot_given_condition=term(Names.plot_given_variable)+Literal("=").suppress()+list_struct(Names.plot_given_value)
+        plot_free_variable_list=Group(term+ZeroOrMore(COMMA+term))(Names.plot_free_variable)
+        self.plotStmt=Keyword("plot").suppress()+term(Names.plot_dependent_variable)\
+                      +Keyword("against").suppress()+plot_free_variable_list\
+                      +Optional(Keyword("with").suppress()+Group(
+                        plot_given_condition+ZeroOrMore(COMMA+plot_given_condition)))(Names.plot_given_condition)\
+                      +Keyword("as").suppress()+Word(alphas)(Names.plot_type)
         direct_import_statement = Group(
             Keyword("import") +
             path.setResultsName(Names.import_path)
@@ -136,7 +143,8 @@ class Program:
                        ).setResultsName(Names.import_alias))
         ).setResultsName(Names.import_result_name)
         self.importStmt = (direct_import_statement | from_import_statement) + ENDL
-        stmt = self.typeDef | self.ruleDef | self.analysisStmt | self.blankStmt | self.commentStmt | self.importStmt
+        stmt = self.typeDef | self.ruleDef | self.analysisStmt \
+               | self.blankStmt | self.commentStmt | self.importStmt | self.plotStmt
 
         self.program = OneOrMore(stmt)
         self.program.ignore(self.commentStmt)
@@ -206,6 +214,10 @@ class Program:
                     
                     """.format(e, s)
                 )
+
+        def do_plotStmt(s, l, t):
+            self.ast_nodes.append(PlotNode(t))
+
         for name in all_names:
             ex = vars(self)[name]
             action = vars()['do_' + name]

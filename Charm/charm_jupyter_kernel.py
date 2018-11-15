@@ -8,11 +8,12 @@ from .interpreter.parser import Program
 
 args = namedtuple('arg', ['verbose', 'z3core', 'draw', 'mcsamples'])
 args.verbose = False
-args.z3core = False
+args.z3core = True
 args.draw = False
 args.mcsamples = 100
 kernel = True
 logging.basicConfig(level=logging.DEBUG)
+
 
 # All modules incorporating with this kernel are expected to use the logging mechanism rather than print
 # to generate output.

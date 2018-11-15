@@ -1,11 +1,13 @@
 import logging
 import re
+from collections import defaultdict
 from random import uniform
 from sys import stderr
 
 from pint import UnitRegistry, DimensionalityError
 from sympy.parsing.sympy_parser import parse_expr, auto_symbol, convert_equals_signs
 from sympy.solvers import solve
+from matplotlib import pyplot as plt
 
 # A valid variable name consists alphanums and dot (excluding leading nums and dots).
 VAR_NAME = re.compile(r'(?![\d.+])[\w.]+')
@@ -55,6 +57,13 @@ class Names(object):
     import_modules = 'import_modules'
     import_alias = 'import_alias'
     import_result_name = 'import'
+    plot_dependent_variable = 'plot_dependent_variable'
+    plot_free_variable = 'plot_free_variable'
+    plot_type = 'plot_type'
+    plot_given_variable="plot_given_variable"
+    plot_given_value="plot_given_value"
+    plot_given_condition="plot_given_condition"
+    plot_statement = "plot_statement"
     # Function keywords. 
     builtin = {'Eq', 'exp', 'log', norm_dist, 'range', 'floor', 'ceiling', summation, product, 'floor', 'ufloor',
                'ceiling', 'uceiling', min_func, 'umin', max_func, 'umax', from_file, piecewise, 'list'}
@@ -381,6 +390,33 @@ class SolveNode(Node):
         solve_stmt = self.toks[Names.solve][0]
         assert Names.target in solve_stmt
         self.targets = solve_stmt[Names.target]
+
+
+class PlotNode(Node):
+    all_plot_functions = ['plot','scatter']
+
+    def __init__(self, toks):
+        super().__init__()
+        self.toks = toks
+        self.parse()
+
+    def parse(self):
+        self.dependent = self.toks[Names.plot_dependent_variable]
+        self.free = self.toks[Names.plot_free_variable]
+        if Names.plot_given_condition in self.toks:
+            self.given_var_dict={
+                condition[Names.plot_given_variable]:eval(''.join(condition[Names.plot_given_value]))
+                for condition in self.toks[Names.plot_given_condition]
+            }
+        else:
+            self.given_var_dict={}
+        assert self.toks[Names.plot_type] in PlotNode.all_plot_functions
+
+    def exportZ3(self):
+        raise NotImplementedError
+
+    def dump(self, indent='', printable=True):
+        pass
 
 
 class Relation(Node):
