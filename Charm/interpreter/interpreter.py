@@ -4,6 +4,7 @@ import logging
 import pickle
 from collections import defaultdict
 from timeit import default_timer as timer
+from matplotlib import pyplot as plt
 
 import mcerp3 as mcerp
 import numpy as np
@@ -1019,16 +1020,17 @@ class Interpreter(object):
         proped_vals = dict([(k, None) for k in flat_iter_vars])
         last_proped_vals = None
         start = timer()
-        for key, val in self.given.items():
-            for k, v in zip(key, val):
-                # Propagate non-iterables first.
-                if not k in flat_iter_vars and k in self.v2n:
-                    self.evaluate_graph(self.v2n[k], k, v)
-        # If we are done with inputs.
-        if not iter_vars:
-            if self.graph.eval_constraints():
-                for tar in self.targets:
-                    logging.debug('Result {}: {}'.format(tar, self.v2n[tar].out_val))
+        # Changed the mechanism so that every variable is iterable, maybe not need the code below any more
+        # for key, val in self.given.items():
+        #     for k, v in zip(key, val):
+        #         # Propagate non-iterables first.
+        #         if not k in flat_iter_vars and k in self.v2n:
+        #             self.evaluate_graph(self.v2n[k], k, v)
+        # # If we are done with inputs.
+        # if not iter_vars:
+        #     if self.graph.eval_constraints():
+        #         for tar in self.targets:
+        #             logging.debug('Result {}: {}'.format(tar, self.v2n[tar].out_val))
         # Handle iterations.
         for t in itertools.product(*tuple(iter_vals)):
             for key, val in zip(iter_vars, t):
@@ -1057,20 +1059,23 @@ class Interpreter(object):
 
                                 logging.info('Result {} -> {} = {}'.format(tag, tar, self.v2n[tar].out_val))
         end = timer()
-        file_name = '-'.join(self.targets)
-        file_name += '-ON-' + '-'.join(flat_iter_vars) + '.out'
-        with open(file_name, 'wb') as ofile:
-            pickle.dump(results, ofile)
-            ofile.close()
+        # TODO Create a CLI entry and move the save function there
+        # file_name = '-'.join(self.targets)
+        # file_name += '-ON-' + '-'.join(flat_iter_vars) + '.out'
+        # with open(file_name, 'wb') as ofile:
+        #     pickle.dump(results, ofile)
+        #     ofile.close()
         self.result = results
+        self.vars=flat_iter_vars
         logging.log(logging.INFO, 'Results saved to {}'.format(file_name))
         logging.log(logging.INFO, 'Time used: {}'.format(end - start))
 
-    # TODO plotting (optional distinguish different kinds of plot)
-    def __plot(self, node):
+    def __plot(self, node: PlotNode):
         if node.dependent not in self.targets:
             logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
             return
+        dependent_variable_index=self.targets.index(node.dependent)
+        x,y=[],[]
 
     def run(self):
         self.link()
@@ -1095,12 +1100,12 @@ class Interpreter(object):
             logging.log(logging.ERROR,
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
             self.solveSMT()
-        images=[]
+        images = []
         if self.plot_nodes:
             for node in self.plot_nodes:
                 images.append(self.__plot(node))
         return {
-            'raw':self.result,
-            'img':images
+            'raw': self.result,
+            'img': images
         }
         # TODO figure out results for other cases
