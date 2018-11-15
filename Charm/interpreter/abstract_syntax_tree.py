@@ -403,6 +403,8 @@ class PlotNode(Node):
     def parse(self):
         self.dependent = self.toks[Names.plot_dependent_variable]
         self.free = self.toks[Names.plot_free_variable]
+        if len(self.free)>1:
+            raise NotImplementedError("3D plotting not implememted yet")
         if Names.plot_given_condition in self.toks:
             self.given_var_dict={
                 condition[Names.plot_given_variable]:eval(''.join(condition[Names.plot_given_value]))
@@ -411,6 +413,7 @@ class PlotNode(Node):
         else:
             self.given_var_dict={}
         assert self.toks[Names.plot_type] in PlotNode.all_plot_functions
+        self.plot_type=self.toks[Names.plot_type]
 
     def exportZ3(self):
         raise NotImplementedError

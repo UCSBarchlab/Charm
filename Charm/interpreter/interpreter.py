@@ -1,10 +1,6 @@
 import functools
 import itertools
-import logging
-import pickle
-from collections import defaultdict
 from timeit import default_timer as timer
-from matplotlib import pyplot as plt
 
 import mcerp3 as mcerp
 import numpy as np
@@ -1066,16 +1062,51 @@ class Interpreter(object):
         #     pickle.dump(results, ofile)
         #     ofile.close()
         self.result = results
-        self.vars=flat_iter_vars
-        logging.log(logging.INFO, 'Results saved to {}'.format(file_name))
-        logging.log(logging.INFO, 'Time used: {}'.format(end - start))
+        self.variables = iter_vars
+        self.values = iter_vals
+        self.flat_variables=flat_iter_vars
+        # logging.log(logging.INFO, 'Results saved to {}'.format(file_name))
+        # logging.log(logging.INFO, 'Time used: {}'.format(end - start))
 
     def __plot(self, node: PlotNode):
         if node.dependent not in self.targets:
             logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
             return
-        dependent_variable_index=self.targets.index(node.dependent)
-        x,y=[],[]
+        dependent_variable_index = self.targets.index(node.dependent)
+        variables = self.variables
+        values = self.values
+        given_variables = []
+        given_values = []
+        free_variables=[]
+        free_values=[]
+        for var, val in zip(variables, values):
+            if not set(var).intersection(set(node.free)):
+                if set(var).intersection(set(node.given_var_dict.keys())):
+                    for single_combined_value in val:
+                        for single_var, single_value in zip(var, single_combined_value):
+                            if single_value not in node.given_var_dict[single_var]:
+                                val.remove(single_combined_value)
+                                break
+                given_variables.append(var)
+                given_values.append(val)
+            else:
+                free_variables.append(var)
+                free_values.append(val)
+        for given_value in itertools.product(*given_values):
+            x,y=[],[]
+            for free_value in itertools.product(*free_values):
+                x.append(free_value)
+                tag=[0]*len(self.flat_variables)
+                for var_turple,val_turple in zip(given_variables,given_value):
+                    for single_var,single_val in zip(var_turple,val_turple):
+                        tag[self.flat_variables.index(single_var)]=single_val
+                for var_turple,val_turple in zip(free_variables,free_value):
+                    for single_var,single_val in zip(var_turple,val_turple):
+                        tag[self.flat_variables.index(single_var)]=single_val
+                y.append(self.result[tuple(tag)])
+                # TODO figure out 3D plotting
+                getattr(plt,node.plot_type)(x,y)
+
 
     def run(self):
         self.link()
