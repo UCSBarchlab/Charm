@@ -118,12 +118,12 @@ class Program:
         self.blankStmt = Suppress((LineStart() + LineEnd()) ^ White()).setName('blankStmt')
         self.commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
         plot_given_condition=term(Names.plot_given_variable)+Literal("=").suppress()+list_struct(Names.plot_given_value)
-        plot_free_variable_list=Group(term+ZeroOrMore(COMMA+term))(Names.plot_free_variable)
-        self.plotStmt=Keyword("plot").suppress()+term(Names.plot_dependent_variable)\
-                      +Keyword("against").suppress()+plot_free_variable_list\
-                      +Optional(Keyword("with").suppress()+Group(
-                        plot_given_condition+ZeroOrMore(COMMA+plot_given_condition)))(Names.plot_given_condition)\
-                      +Keyword("as").suppress()+Word(alphas)(Names.plot_type)
+        plot_free_variable_list = Group(term + ZeroOrMore(COMMA.suppress() + term))(Names.plot_free_variable)
+        self.plotStmt = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
+                        + Keyword("against").suppress() + plot_free_variable_list \
+                        + Optional(Keyword("with").suppress() + Group(
+            plot_given_condition + ZeroOrMore(COMMA + plot_given_condition)))(Names.plot_given_condition) \
+                        + Keyword("as").suppress() + Word(alphas)(Names.plot_type) + ENDL
         direct_import_statement = Group(
             Keyword("import") +
             path.setResultsName(Names.import_path)
@@ -189,7 +189,7 @@ class Program:
             try:
                 self.imported.append(res[Names.import_path])
                 src = open(res[Names.import_path] + '.charm', 'r').read()
-                _imported = Program(src)
+                _imported = Program(src, args)
                 types = _imported.type_nodes
                 rules = _imported.rule_nodes
                 if Names.import_modules in res and not '*' in list(res[Names.import_modules]):

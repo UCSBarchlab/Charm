@@ -1,11 +1,13 @@
 import functools
 import itertools
+from collections import defaultdict
 from datetime import datetime
 from timeit import default_timer as timer
 
 import mcerp3 as mcerp
 import numpy as np
-import pandas as pd
+from matplotlib.axes import Axes
+from mpl_toolkits.mplot3d import Axes3D
 from networkx.algorithms import bipartite as biGraph
 from sympy import simplify
 from sympy.parsing.sympy_parser import _token_splittable
@@ -1082,6 +1084,7 @@ class Interpreter(object):
             for free_var in node.free:
                 if free_var in vars:
                     correlated_with_free_variables += list(vars)
+        # Compute values for unrelated variables
         for value in all_values:
             tag = []
             for k, v in zip(all_variables, value):
@@ -1096,50 +1099,26 @@ class Interpreter(object):
                 )
         handles=[]
         legengs=[]
+        # Iterate through each possible combination of values of unrelated variables and plot separately each
+        fig = plt.figure()
+        if len(node.free) == 1:
+            ax = Axes(fig, [1, 1, 1, 1])
+        else:
+            ax = Axes3D(fig)
         for tag in plot_data:
             xs=[i[:-1] for i in plot_data[tag]]
             y=[i[-1] for i in plot_data[tag]]
-            handles.append(getattr(plt,node.plot_type)(xs,y))
-            legengs.append(tag)
+            if len(xs) > 0:
+                if len(xs[0]) == 1:
+                    handles.append(getattr(ax, node.plot_type)(xs, y))
+                    legengs.append(tag)
+                else:
+                    handles.append(getattr(ax, node.plot_type)([i[0] for i in xs], [i[1] for i in xs], y))
+
         filename = "{}.png".format(datetime.now())
         plt.savefig(filename)
         plt.clf()
         return filename
-
-        # variables = self.variables
-        # values = self.values
-        # given_variables = []
-        # given_values = []
-        # free_variables=[]
-        # free_values=[]
-        # for var, val in zip(variables, values):
-        #     if not set(var).intersection(set(node.free)):
-        #         if set(var).intersection(set(node.given_var_dict.keys())):
-        #             for single_combined_value in val:
-        #                 for single_var, single_value in zip(var, single_combined_value):
-        #                     if single_value not in node.given_var_dict[single_var]:
-        #                         val.remove(single_combined_value)
-        #                         break
-        #         given_variables.append(var)
-        #         given_values.append(val)
-        #     else:
-        #         free_variables.append(var)
-        #         free_values.append(val)
-        # if not free_variables:
-        #     logging.error("Plot for {} has no ")
-        # for given_value in itertools.product(*given_values):
-        #     x,y=[],[]
-        #     for free_value in itertools.product(*free_values):
-        #         x.append(free_value)
-        #         tag=[0]*len(self.flat_variables)
-        #         for var_turple,val_turple in zip(given_variables,given_value):
-        #             for single_var,single_val in zip(var_turple,val_turple):
-        #                 tag[self.flat_variables.index(single_var)]=single_val
-        #         for var_turple,val_turple in zip(free_variables,free_value):
-        #             for single_var,single_val in zip(var_turple,val_turple):
-        #                 tag[self.flat_variables.index(single_var)]=single_val
-        #         y.append(self.result[tuple(tag)])
-        #         getattr(plt,node.plot_type)(x,y)
 
     def run(self):
         self.link()

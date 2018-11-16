@@ -1,13 +1,10 @@
 import logging
 import re
-from collections import defaultdict
 from random import uniform
-from sys import stderr
 
 from pint import UnitRegistry, DimensionalityError
 from sympy.parsing.sympy_parser import parse_expr, auto_symbol, convert_equals_signs
 from sympy.solvers import solve
-from matplotlib import pyplot as plt
 
 # A valid variable name consists alphanums and dot (excluding leading nums and dots).
 VAR_NAME = re.compile(r'(?![\d.+])[\w.]+')
@@ -304,7 +301,7 @@ class RuleNode(Node):
 
 
 class AssumeNode(Node):
-    """ Assumed models.charm.
+    """ Assumed models_charm.
     """
 
     def __init__(self, toks):
@@ -403,8 +400,6 @@ class PlotNode(Node):
     def parse(self):
         self.dependent = self.toks[Names.plot_dependent_variable]
         self.free = self.toks[Names.plot_free_variable]
-        if len(self.free)>1:
-            raise NotImplementedError("3D plotting not implememted yet")
         if Names.plot_given_condition in self.toks:
             self.given_var_dict={
                 condition[Names.plot_given_variable]:eval(''.join(condition[Names.plot_given_value]))
@@ -472,7 +467,7 @@ class Relation(Node):
         try:
             ureg.parse_expression(unit_expression)
         except DimensionalityError as e:
-            logging.error("Units incompatible in equation {}\nError message:{}".format(self.orig, e), file=stderr)
+            logging.error("Units incompatible in equation {}\nError message:{}".format(self.orig, e))
 
     def subs(self, ext_name):
         base_name = ext_name[:ext_name.find(Names.clone_ext)]

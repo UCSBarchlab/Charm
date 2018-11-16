@@ -1,7 +1,9 @@
-from Charm.models import Distribution
-from collections import defaultdict
-from mcerp import *
 import functools
+from collections import defaultdict
+
+from mcerp import *
+
+from Charm.models import Distribution
 
 
 # Get yield rate based on Possion model.
@@ -80,7 +82,7 @@ def fabrication_boxcox_uncertainty(d, n):
         return 0
 
 class UncertaintyModel(object):
-    """ This class defines the interface to insert uncertainty models.charm.
+    """ This class defines the interface to insert uncertainty models_charm.
     """
 
     design_failure_rate = None
