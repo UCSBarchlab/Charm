@@ -1143,6 +1143,7 @@ class Interpreter(object):
             logging.log(logging.ERROR,
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
             self.solveSMT()
+
         images = []
         if self.plot_nodes:
             for node in self.plot_nodes:
