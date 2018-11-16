@@ -46,16 +46,31 @@ class CharmKernel(Kernel):
             try:
                 logging.log(logging.DEBUG, self.code_cache)
                 result = Program(self.code_cache, args).run()
-                if not silent and result is not None:
-                    self.send_response(
-                        stream=self.iopub_socket,
-                        msg_or_type='display_data',
-                        content={
-                            'data': {
-                                'text/plain': str(dict(result))
+                if not silent:
+                    if 'raw' in result:
+                        self.send_response(
+                            stream=self.iopub_socket,
+                            msg_or_type='display_data',
+                            content={
+                                'data': {
+                                    'text/plain': str(dict(result['raw']))
+                                }
                             }
-                        }
-                    )
+                        )
+                    if 'img' in result:
+                        for filename in result['img']:
+                            if filename is not None:
+                                with open(filename,'rb') as f:
+                                    img=f.read()
+                                    self.send_response(
+                                        stream=self.iopub_socket,
+                                        msg_or_type='display_data',
+                                        content={
+                                            'data':{
+                                                'image/jpeg':img
+                                            }
+                                        }
+                                    )
                 return {
                     "status": "ok",
                     "execution_count": self.execution_count

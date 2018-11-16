@@ -1,7 +1,9 @@
 import functools
 import itertools
+import logging
+from datetime import date, datetime
 from timeit import default_timer as timer
-
+import pandas as pd
 import mcerp3 as mcerp
 import numpy as np
 from networkx.algorithms import bipartite as biGraph
@@ -1064,7 +1066,7 @@ class Interpreter(object):
         self.result = results
         self.variables = iter_vars
         self.values = iter_vals
-        self.flat_variables=flat_iter_vars
+        self.flat_variables = flat_iter_vars
         # logging.log(logging.INFO, 'Results saved to {}'.format(file_name))
         # logging.log(logging.INFO, 'Time used: {}'.format(end - start))
 
@@ -1072,41 +1074,74 @@ class Interpreter(object):
         if node.dependent not in self.targets:
             logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
             return
-        dependent_variable_index = self.targets.index(node.dependent)
-        variables = self.variables
-        values = self.values
-        given_variables = []
-        given_values = []
-        free_variables=[]
-        free_values=[]
-        for var, val in zip(variables, values):
-            if not set(var).intersection(set(node.free)):
-                if set(var).intersection(set(node.given_var_dict.keys())):
-                    for single_combined_value in val:
-                        for single_var, single_value in zip(var, single_combined_value):
-                            if single_value not in node.given_var_dict[single_var]:
-                                val.remove(single_combined_value)
-                                break
-                given_variables.append(var)
-                given_values.append(val)
-            else:
-                free_variables.append(var)
-                free_values.append(val)
-        for given_value in itertools.product(*given_values):
-            x,y=[],[]
-            for free_value in itertools.product(*free_values):
-                x.append(free_value)
-                tag=[0]*len(self.flat_variables)
-                for var_turple,val_turple in zip(given_variables,given_value):
-                    for single_var,single_val in zip(var_turple,val_turple):
-                        tag[self.flat_variables.index(single_var)]=single_val
-                for var_turple,val_turple in zip(free_variables,free_value):
-                    for single_var,single_val in zip(var_turple,val_turple):
-                        tag[self.flat_variables.index(single_var)]=single_val
-                y.append(self.result[tuple(tag)])
-                # TODO figure out 3D plotting
-                getattr(plt,node.plot_type)(x,y)
+        all_variables = list(self.flat_variables) + list(self.targets)
+        all_values = [tuple(k) + tuple(self.result[k]) for k in self.result]
+        raw_results = pd.DataFrame.from_records(all_values, columns=all_variables)
+        unrelated_vars = []
+        unrelated_vals = []
+        for var in all_variables:
+            if var not in node.free and not var == node.dependent:
+                unrelated_vars.append(var)
+                if var not in node.given_var_dict:
+                    unrelated_vals.append(raw_results[var].unique().tolist())
+                else:
+                    unrelated_vals.append(
+                        list(set(raw_results[var].unique().tolist()).intersection(set(node.given_var_dict[var]))))
+        legends=[]
+        handles=[]
+        for t in itertools.product(*unrelated_vals):
+            tmp_raw_data = raw_results
+            for k, v in zip(unrelated_vars, t):
+                tmp_raw_data = tmp_raw_data.loc[getattr(tmp_raw_data, k) == v, :]
+            xs = [tmp_raw_data[var].tolist() for var in node.free]
+            y = tmp_raw_data[node.dependent].tolist()
+            if len(y):
+                if len(xs) == 1:
+                    handles.append(getattr(plt, node.plot_type)(xs[0], y))
+                else:
+                    # TODO figure out 3D
+                    pass
+            legends.append(str(t))
+        plt.legend(handles,legends)
+        filename="{}.jpg".format(datetime.now())
+        plt.imsave(filename)
+        plt.clf()
+        return filename
 
+        # variables = self.variables
+        # values = self.values
+        # given_variables = []
+        # given_values = []
+        # free_variables=[]
+        # free_values=[]
+        # for var, val in zip(variables, values):
+        #     if not set(var).intersection(set(node.free)):
+        #         if set(var).intersection(set(node.given_var_dict.keys())):
+        #             for single_combined_value in val:
+        #                 for single_var, single_value in zip(var, single_combined_value):
+        #                     if single_value not in node.given_var_dict[single_var]:
+        #                         val.remove(single_combined_value)
+        #                         break
+        #         given_variables.append(var)
+        #         given_values.append(val)
+        #     else:
+        #         free_variables.append(var)
+        #         free_values.append(val)
+        # if not free_variables:
+        #     logging.error("Plot for {} has no ")
+        # for given_value in itertools.product(*given_values):
+        #     x,y=[],[]
+        #     for free_value in itertools.product(*free_values):
+        #         x.append(free_value)
+        #         tag=[0]*len(self.flat_variables)
+        #         for var_turple,val_turple in zip(given_variables,given_value):
+        #             for single_var,single_val in zip(var_turple,val_turple):
+        #                 tag[self.flat_variables.index(single_var)]=single_val
+        #         for var_turple,val_turple in zip(free_variables,free_value):
+        #             for single_var,single_val in zip(var_turple,val_turple):
+        #                 tag[self.flat_variables.index(single_var)]=single_val
+        #         y.append(self.result[tuple(tag)])
+        #         getattr(plt,node.plot_type)(x,y)
 
     def run(self):
         self.link()
