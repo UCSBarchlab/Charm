@@ -91,7 +91,7 @@ class CharmKernel(Kernel):
                     "status": "ok",
                     "execution_count": self.execution_count
                 }
-            except Exception as e:
+            except Exception:
                 # TODO more detailed error message
                 self.send_response(
                     stream=self.iopub_socket,
