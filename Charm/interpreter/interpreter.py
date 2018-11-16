@@ -1,11 +1,11 @@
 import functools
 import itertools
-import logging
-from datetime import date, datetime
+from datetime import datetime
 from timeit import default_timer as timer
-import pandas as pd
+
 import mcerp3 as mcerp
 import numpy as np
+import pandas as pd
 from networkx.algorithms import bipartite as biGraph
 from sympy import simplify
 from sympy.parsing.sympy_parser import _token_splittable
@@ -1076,35 +1076,33 @@ class Interpreter(object):
             return
         all_variables = list(self.flat_variables) + list(self.targets)
         all_values = [tuple(k) + tuple(self.result[k]) for k in self.result]
-        raw_results = pd.DataFrame.from_records(all_values, columns=all_variables)
-        unrelated_vars = []
-        unrelated_vals = []
-        for var in all_variables:
-            if var not in node.free and not var == node.dependent:
-                unrelated_vars.append(var)
-                if var not in node.given_var_dict:
-                    unrelated_vals.append(raw_results[var].unique().tolist())
-                else:
-                    unrelated_vals.append(
-                        list(set(raw_results[var].unique().tolist()).intersection(set(node.given_var_dict[var]))))
-        legends=[]
+        plot_data=defaultdict(list)
+        correlated_with_free_variables = []
+        for vars in self.given.keys():
+            for free_var in node.free:
+                if free_var in vars:
+                    correlated_with_free_variables += list(vars)
+        for value in all_values:
+            tag = []
+            for k, v in zip(all_variables, value):
+                if k not in correlated_with_free_variables:
+                    if k in node.given_var_dict:
+                        if v not in node.given_var_dict[k]:
+                            break
+                    tag.append(v)
+            else:
+                plot_data[tuple(tag)].append(
+                    [value[all_variables.index(i)] for i in node.free]+[value[all_variables.index(node.dependent)]]
+                )
         handles=[]
-        for t in itertools.product(*unrelated_vals):
-            tmp_raw_data = raw_results
-            for k, v in zip(unrelated_vars, t):
-                tmp_raw_data = tmp_raw_data.loc[getattr(tmp_raw_data, k) == v, :]
-            xs = [tmp_raw_data[var].tolist() for var in node.free]
-            y = tmp_raw_data[node.dependent].tolist()
-            if len(y):
-                if len(xs) == 1:
-                    handles.append(getattr(plt, node.plot_type)(xs[0], y))
-                else:
-                    # TODO figure out 3D
-                    pass
-            legends.append(str(t))
-        plt.legend(handles,legends)
-        filename="{}.jpg".format(datetime.now())
-        plt.imsave(filename)
+        legengs=[]
+        for tag in plot_data:
+            xs=[i[:-1] for i in plot_data[tag]]
+            y=[i[-1] for i in plot_data[tag]]
+            handles.append(getattr(plt,node.plot_type)(xs,y))
+            legengs.append(tag)
+        filename = "{}.png".format(datetime.now())
+        plt.savefig(filename)
         plt.clf()
         return filename
 
@@ -1174,4 +1172,3 @@ class Interpreter(object):
             'raw': self.result,
             'img': images
         }
-        # TODO figure out results for other cases
