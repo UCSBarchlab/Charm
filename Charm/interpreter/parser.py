@@ -3,7 +3,6 @@ import warnings
 
 from pyparsing import *
 
-from Charm.utils.charm_options import *
 from .interpreter import *
 
 ParserElement.setDefaultWhitespaceChars(' ')
@@ -229,7 +228,7 @@ class Program:
             logging.fatal("Fatal error:\n{}\n{}\n{}".format(err.line, " " * (err.column - 1) + "^", err))
             raise
 
-    def run(self):
+    def run(self, save=False):
         class _Nodes(object):
             def __init__(self, nodes):
                 self.nodes = nodes  # All ast nodes.
@@ -242,23 +241,6 @@ class Program:
         interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples)
         # interp.test_gc_overhead()
         result = interp.run()
+        if save:
+            interp.save()
         return result
-
-
-def main():
-    global args
-    parser = get_parser()
-    addCommonOptions(parser)
-    addCompilerOptions(parser)
-    args = parse_args(parser)
-
-    with open(args.source, 'r') as src_file:
-        src = src_file.read()
-        src_file.close()
-
-    program = Program(src, args)
-    program.run()
-
-
-if __name__ == '__main__':
-    main()

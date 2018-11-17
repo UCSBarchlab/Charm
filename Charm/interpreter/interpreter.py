@@ -1,12 +1,12 @@
 import functools
+import io
 import itertools
+import pickle
 from collections import defaultdict
-from datetime import datetime
 from timeit import default_timer as timer
 
 import mcerp3 as mcerp
 import numpy as np
-from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D
 from networkx.algorithms import bipartite as biGraph
 from sympy import simplify
@@ -1059,12 +1059,7 @@ class Interpreter(object):
 
                                 logging.info('Result {} -> {} = {}'.format(tag, tar, self.v2n[tar].out_val))
         end = timer()
-        # TODO Create a CLI entry and move the save function there
-        # file_name = '-'.join(self.targets)
-        # file_name += '-ON-' + '-'.join(flat_iter_vars) + '.out'
-        # with open(file_name, 'wb') as ofile:
-        #     pickle.dump(results, ofile)
-        #     ofile.close()
+
         self.result = results
         self.variables = iter_vars
         self.values = iter_vals
@@ -1078,8 +1073,10 @@ class Interpreter(object):
             return
         all_variables = list(self.flat_variables) + list(self.targets)
         all_values = [tuple(k) + tuple(self.result[k]) for k in self.result]
-        plot_data=defaultdict(list)
+        plot_data = defaultdict(list)
         correlated_with_free_variables = []
+        # i.e. if 'assume (a,b)=[(?,?),...]', a is the free variable, the b is considered correlated
+        # correlated variables should be treated differently, as they change with the free variable
         for vars in self.given.keys():
             for free_var in node.free:
                 if free_var in vars:
@@ -1095,30 +1092,37 @@ class Interpreter(object):
                     tag.append(v)
             else:
                 plot_data[tuple(tag)].append(
-                    [value[all_variables.index(i)] for i in node.free]+[value[all_variables.index(node.dependent)]]
+                    [value[all_variables.index(i)] for i in node.free] + [value[all_variables.index(node.dependent)]]
                 )
-        handles=[]
-        legengs=[]
+        handles = []
+        legends = []
         # Iterate through each possible combination of values of unrelated variables and plot separately each
-        fig = plt.figure()
         if len(node.free) == 1:
-            ax = Axes(fig, [1, 1, 1, 1])
+            ax = plt.subplot(111)
         else:
+            fig = plt.figure()
             ax = Axes3D(fig)
         for tag in plot_data:
-            xs=[i[:-1] for i in plot_data[tag]]
-            y=[i[-1] for i in plot_data[tag]]
+            xs = [i[:-1] for i in plot_data[tag]]
+            y = [i[-1] for i in plot_data[tag]]
             if len(xs) > 0:
                 if len(xs[0]) == 1:
                     handles.append(getattr(ax, node.plot_type)(xs, y))
-                    legengs.append(tag)
+                    legends.append(tag)
                 else:
                     handles.append(getattr(ax, node.plot_type)([i[0] for i in xs], [i[1] for i in xs], y))
-
-        filename = "{}.png".format(datetime.now())
-        plt.savefig(filename)
-        plt.clf()
-        return filename
+        if len(handles) > 0:
+            if len(node.free) == 1:
+                ax.set_xlabel(node.free[0])
+                ax.set_ylabel(node.dependent)
+            else:
+                ax.set_xlabel(node.free[0])
+                ax.set_ylabel(node.free[1])
+                ax.set_zlabel(node.dependent)
+            image = io.BytesIO()
+            plt.savefig(image, dpi='figure')
+            plt.clf()
+            return image
 
     def run(self):
         self.link()
@@ -1144,11 +1148,22 @@ class Interpreter(object):
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
             self.solveSMT()
 
-        images = []
+        self.images = []
         if self.plot_nodes:
             for node in self.plot_nodes:
-                images.append(self.__plot(node))
+                self.images.append(self.__plot(node).getvalue())
         return {
             'raw': self.result,
-            'img': images
+            'img': self.images
         }
+
+    def save(self):
+        file_name = '-'.join(self.targets)
+        file_name += '-ON-' + '-'.join(self.flat_variables) + '.out'
+        with open(file_name, 'wb') as ofile:
+            pickle.dump(self.result, ofile)
+            ofile.close()
+        for node, img in zip(self.plot_nodes, self.images):
+            filename = '{}_against_{}'.format(node.dependent, node.free)
+            with open(filename, 'wb') as f:
+                f.write(img)

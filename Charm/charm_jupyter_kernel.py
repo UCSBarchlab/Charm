@@ -28,7 +28,6 @@ args.z3core = False
 args.draw = False
 args.mcsamples = 100
 kernel = True
-logging.basicConfig(level=logging.DEBUG)
 
 
 # All modules incorporating with this kernel are expected to use the logging mechanism rather than print
@@ -74,16 +73,14 @@ class CharmKernel(Kernel):
                             }
                         )
                     if 'img' in result:
-                        for filename in result['img']:
-                            if filename is not None:
-                                with open(filename,'rb') as f:
-                                    img=f.read()
+                        for image in result['img']:
+                            if image is not None:
                                     self.send_response(
                                         stream=self.iopub_socket,
                                         msg_or_type='display_data',
                                         content={
                                             'data':{
-                                                'image/png':base64.encodebytes(img).decode()
+                                                'image/png': base64.encodebytes(image).decode()
                                             }
                                         }
                                     )
