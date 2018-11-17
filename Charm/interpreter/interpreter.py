@@ -164,7 +164,7 @@ class Interpreter(object):
                     logging.debug('[{}]: {} --> {}'.format(cur.id, cur.id, cur.next(e).id))
                     all_marked = all_marked & self.DFS(cur.next(e))
                     if not all_marked:
-                        break;
+                        break
                 if all_marked:
                     logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
                     assert self.stack.pop() == cur.id
@@ -1151,7 +1151,9 @@ class Interpreter(object):
         self.images = []
         if self.plot_nodes:
             for node in self.plot_nodes:
-                self.images.append(self.__plot(node).getvalue())
+                result = self.__plot(node)
+                if result is not None:
+                    self.images.append(result.getvalue())
         return {
             'raw': self.result,
             'img': self.images
