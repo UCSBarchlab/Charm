@@ -3,11 +3,9 @@ import warnings
 
 from pyparsing import *
 
-from Charm.utils.charm_options import *
 from .interpreter import *
 
 ParserElement.setDefaultWhitespaceChars(' ')
-
 
 args = None
 
@@ -24,6 +22,7 @@ class Program:
         assumeStmt
         solveStmt
         importStmt
+        plotStmt
         '''.split()
         COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
         NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
@@ -117,6 +116,13 @@ class Program:
         self.analysisStmt = (self.givenStmt | self.assumeStmt | self.solveStmt) + ENDL
         self.blankStmt = Suppress((LineStart() + LineEnd()) ^ White()).setName('blankStmt')
         self.commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
+        plot_given_condition=term(Names.plot_given_variable)+Literal("=").suppress()+list_struct(Names.plot_given_value)
+        plot_free_variable_list = Group(term + ZeroOrMore(COMMA.suppress() + term))(Names.plot_free_variable)
+        self.plotStmt = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
+                        + Keyword("against").suppress() + plot_free_variable_list \
+                        + Optional(Keyword("with").suppress() + Group(
+            plot_given_condition + ZeroOrMore(COMMA + plot_given_condition)))(Names.plot_given_condition) \
+                        + Keyword("as").suppress() + Word(alphas)(Names.plot_type) + ENDL
         direct_import_statement = Group(
             Keyword("import") +
             path.setResultsName(Names.import_path)
@@ -136,7 +142,8 @@ class Program:
                        ).setResultsName(Names.import_alias))
         ).setResultsName(Names.import_result_name)
         self.importStmt = (direct_import_statement | from_import_statement) + ENDL
-        stmt = self.typeDef | self.ruleDef | self.analysisStmt | self.blankStmt | self.commentStmt | self.importStmt
+        stmt = self.typeDef | self.ruleDef | self.analysisStmt \
+               | self.blankStmt | self.commentStmt | self.importStmt | self.plotStmt
 
         self.program = OneOrMore(stmt)
         self.program.ignore(self.commentStmt)
@@ -181,7 +188,7 @@ class Program:
             try:
                 self.imported.append(res[Names.import_path])
                 src = open(res[Names.import_path] + '.charm', 'r').read()
-                _imported = Program(src)
+                _imported = Program(src, args)
                 types = _imported.type_nodes
                 rules = _imported.rule_nodes
                 if Names.import_modules in res and not '*' in list(res[Names.import_modules]):
@@ -206,6 +213,10 @@ class Program:
                     
                     """.format(e, s)
                 )
+
+        def do_plotStmt(s, l, t):
+            self.ast_nodes.append(PlotNode(t))
+
         for name in all_names:
             ex = vars(self)[name]
             action = vars()['do_' + name]
@@ -217,7 +228,7 @@ class Program:
             logging.fatal("Fatal error:\n{}\n{}\n{}".format(err.line, " " * (err.column - 1) + "^", err))
             raise
 
-    def run(self):
+    def run(self, save=False):
         class _Nodes(object):
             def __init__(self, nodes):
                 self.nodes = nodes  # All ast nodes.
@@ -230,23 +241,6 @@ class Program:
         interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples)
         # interp.test_gc_overhead()
         result = interp.run()
+        if save:
+            interp.save()
         return result
-
-
-def main():
-    global args
-    parser = get_parser()
-    addCommonOptions(parser)
-    addCompilerOptions(parser)
-    args = parse_args(parser)
-
-    with open(args.source, 'r') as src_file:
-        src = src_file.read()
-        src_file.close()
-
-    program = Program(src, args)
-    program.run()
-
-
-if __name__ == '__main__':
-    main()

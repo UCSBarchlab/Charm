@@ -38,7 +38,8 @@ setup(
         'matplotlib',
         'z3',
         'pint',
-	'pandas'
+        'pandas',
+        'jupyter'
     ],
     packages=find_packages(),
     cmdclass={

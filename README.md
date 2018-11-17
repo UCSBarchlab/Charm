@@ -31,7 +31,15 @@ z3 (v4.6.0 with python binding)
 
 ### Example Usage
 
-**Just click the [![Binder](https://mybinder.org/badge.svg)] button above or visit https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master **
+**Just click the ![Binder](https://mybinder.org/badge.svg) button above or visit https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master **
+
+To start it from command line, change directory to the root of Charm, and install by
+
+```python setup.py install```
+
+then run
+
+```python CLI.py {source}```
 
 ### Contact & Citation:
 

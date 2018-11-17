@@ -1,4 +1,5 @@
 import functools
+import io
 import itertools
 import pickle
 from collections import defaultdict
@@ -6,6 +7,7 @@ from timeit import default_timer as timer
 
 import mcerp3 as mcerp
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 from networkx.algorithms import bipartite as biGraph
 from sympy import simplify
 from sympy.parsing.sympy_parser import _token_splittable
@@ -62,6 +64,7 @@ class Interpreter(object):
         self.v2v = {}  # Variable name to VarNode.
         self.n2t = {}  # Type name to TypeNode.
         self.v2l = {}  # Variable name to LetNode.
+        self.plot_nodes = []  # Plot tasks
         self.stack = deque()
 
     def type_check(self, var, ival):
@@ -797,6 +800,8 @@ class Interpreter(object):
                 if n_free_variables < n_equations:
                     logging.log(logging.ERROR, 'Overdetermined system, free {}, equation {}'.format(
                         n_free_variables, n_equations))
+            elif isinstance(s, PlotNode):
+                self.plot_nodes.append(s)
             else:
                 raise ValueError('Unknown stmt: {}'.format(s.toks))
 
@@ -993,8 +998,10 @@ class Interpreter(object):
             tag = tuple([proped_vals[var] for var in flat_iter_vars])
             smt = SMTInstance(var_map, rel_list + mutable_eqs)
             solution = smt.solve()
+            self.result = {}
             for tar in self.targets:
                 logging.log(logging.DEBUG, 'Result: {} -> {} = {}'.format(tag, tar, solution[tar]))
+                self.result[tar] = solution[tar]
 
     def solveDetermined(self):
         results = defaultdict(list)
@@ -1008,23 +1015,22 @@ class Interpreter(object):
                 for var in k:
                     flat_iter_vars.append(var)
         if flat_iter_vars:
-
             logging.debug("Result {}".format(tuple(flat_iter_vars)))
         already_evaluated = set()
         proped_vals = dict([(k, None) for k in flat_iter_vars])
         last_proped_vals = None
         start = timer()
-        for key, val in self.given.items():
-            for k, v in zip(key, val):
-                # Propagate non-iterables first.
-                if not k in flat_iter_vars and k in self.v2n:
-                    self.evaluate_graph(self.v2n[k], k, v)
-        # If we are done with inputs.
-        if not iter_vars:
-            if self.graph.eval_constraints():
-                for tar in self.targets:
-
-                    logging.debug('Result {}: {}'.format(tar, self.v2n[tar].out_val))
+        # Changed the mechanism so that every variable is iterable, maybe not need the code below any more
+        # for key, val in self.given.items():
+        #     for k, v in zip(key, val):
+        #         # Propagate non-iterables first.
+        #         if not k in flat_iter_vars and k in self.v2n:
+        #             self.evaluate_graph(self.v2n[k], k, v)
+        # # If we are done with inputs.
+        # if not iter_vars:
+        #     if self.graph.eval_constraints():
+        #         for tar in self.targets:
+        #             logging.debug('Result {}: {}'.format(tar, self.v2n[tar].out_val))
         # Handle iterations.
         for t in itertools.product(*tuple(iter_vals)):
             for key, val in zip(iter_vars, t):
@@ -1053,19 +1059,72 @@ class Interpreter(object):
 
                                 logging.info('Result {} -> {} = {}'.format(tag, tar, self.v2n[tar].out_val))
         end = timer()
-        file_name = '-'.join(self.targets)
-        file_name += '-ON-' + '-'.join(flat_iter_vars) + '.out'
-        with open(file_name, 'wb') as ofile:
-            pickle.dump(results, ofile)
-            ofile.close()
-        self.result = results
-        logging.log(logging.INFO, 'Results saved to {}'.format(file_name))
-        logging.log(logging.INFO, 'Time used: {}'.format(end - start))
 
-    # TODO plotting (optional distinguish different kinds of plot)
+        self.result = results
+        self.variables = iter_vars
+        self.values = iter_vals
+        self.flat_variables = flat_iter_vars
+        # logging.log(logging.INFO, 'Results saved to {}'.format(file_name))
+        # logging.log(logging.INFO, 'Time used: {}'.format(end - start))
+
+    def __plot(self, node: PlotNode):
+        if node.dependent not in self.targets:
+            logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
+            return
+        all_variables = list(self.flat_variables) + list(self.targets)
+        all_values = [tuple(k) + tuple(self.result[k]) for k in self.result]
+        plot_data = defaultdict(list)
+        correlated_with_free_variables = []
+        # i.e. if 'assume (a,b)=[(?,?),...]', a is the free variable, the b is considered correlated
+        # correlated variables should be treated differently, as they change with the free variable
+        for vars in self.given.keys():
+            for free_var in node.free:
+                if free_var in vars:
+                    correlated_with_free_variables += list(vars)
+        # Compute values for unrelated variables
+        for value in all_values:
+            tag = []
+            for k, v in zip(all_variables, value):
+                if k not in correlated_with_free_variables:
+                    if k in node.given_var_dict:
+                        if v not in node.given_var_dict[k]:
+                            break
+                    tag.append(v)
+            else:
+                plot_data[tuple(tag)].append(
+                    [value[all_variables.index(i)] for i in node.free] + [value[all_variables.index(node.dependent)]]
+                )
+        handles = []
+        legends = []
+        # Iterate through each possible combination of values of unrelated variables and plot separately each
+        if len(node.free) == 1:
+            ax = plt.subplot(111)
+        else:
+            fig = plt.figure()
+            ax = Axes3D(fig)
+        for tag in plot_data:
+            xs = [i[:-1] for i in plot_data[tag]]
+            y = [i[-1] for i in plot_data[tag]]
+            if len(xs) > 0:
+                if len(xs[0]) == 1:
+                    handles.append(getattr(ax, node.plot_type)(xs, y))
+                    legends.append(tag)
+                else:
+                    handles.append(getattr(ax, node.plot_type)([i[0] for i in xs], [i[1] for i in xs], y))
+        if len(handles) > 0:
+            if len(node.free) == 1:
+                ax.set_xlabel(node.free[0])
+                ax.set_ylabel(node.dependent)
+            else:
+                ax.set_xlabel(node.free[0])
+                ax.set_ylabel(node.free[1])
+                ax.set_zlabel(node.dependent)
+            image = io.BytesIO()
+            plt.savefig(image, dpi='figure')
+            plt.clf()
+            return image
+
     def run(self):
-        #self.test_gc_overhead()
-        # self.program.dump()
         self.link()
         self.gen_inputs()
         self.build_dependency_graph()
@@ -1081,17 +1140,30 @@ class Interpreter(object):
         if not consistent_and_determined and not use_smt:
             logging.log(logging.FATAL, 'System underdetermined or inconsistent, ''and not using z3 core, aborting '
                                        'evaluation...')
+        elif consistent_and_determined and not use_smt:
+            self.generate_functions()
+            self.solveDetermined()
         elif not consistent_and_determined and use_smt:
             logging.log(logging.ERROR,
                         'System underdetermined or inconsistent, ''trying to solve as an SMT instance...')
             self.solveSMT()
-            #smt = self.constructSMTInstance()
-            #knobs = ['computation']
-            #k2s = {'computation': 1.0}
-            #start = timer()
-            #self.optimizeSMT(smt, knobs, k2s = k2s, minimize=False)
-            #end = timer()
-        else:
-            self.generate_functions()
-            self.solveDetermined()
-            return self.result
+
+        self.images = []
+        if self.plot_nodes:
+            for node in self.plot_nodes:
+                self.images.append(self.__plot(node).getvalue())
+        return {
+            'raw': self.result,
+            'img': self.images
+        }
+
+    def save(self):
+        file_name = '-'.join(self.targets)
+        file_name += '-ON-' + '-'.join(self.flat_variables) + '.out'
+        with open(file_name, 'wb') as ofile:
+            pickle.dump(self.result, ofile)
+            ofile.close()
+        for node, img in zip(self.plot_nodes, self.images):
+            filename = '{}_against_{}'.format(node.dependent, node.free)
+            with open(filename, 'wb') as f:
+                f.write(img)
