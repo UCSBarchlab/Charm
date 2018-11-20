@@ -22,7 +22,7 @@ class Program:
         assumeStmt
         solveStmt
         importStmt
-        plotStmt
+        plotBlock
         '''.split()
         COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
         NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
@@ -116,13 +116,13 @@ class Program:
         self.analysisStmt = (self.givenStmt | self.assumeStmt | self.solveStmt) + ENDL
         self.blankStmt = Suppress((LineStart() + LineEnd()) ^ White()).setName('blankStmt')
         self.commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
-        plot_given_condition=term(Names.plot_given_variable)+Literal("=").suppress()+list_struct(Names.plot_given_value)
-        plot_free_variable_list = Group(term + ZeroOrMore(COMMA.suppress() + term))(Names.plot_free_variable)
-        self.plotStmt = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
-                        + Keyword("against").suppress() + plot_free_variable_list \
-                        + Optional(Keyword("with").suppress() + Group(
-            plot_given_condition + ZeroOrMore(COMMA + plot_given_condition)))(Names.plot_given_condition) \
-                        + Keyword("as").suppress() + Word(alphas)(Names.plot_type) + ENDL
+        plot_given_condition = Group(term + Literal("=").suppress() + list_struct)
+        plot_free_variable_list = Group(term + Optional(COMMA.suppress() + term))(Names.plot_free_variable)
+        plot_conditions = indentedBlock(OneOrMore(plot_given_condition + ENDL), indentStack)(Names.plot_given_condition)
+        self.plotBlock = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
+                         + Keyword("against").suppress() + plot_free_variable_list \
+                         + Keyword("as").suppress() + Word(alphas)(Names.plot_type) \
+                         + Optional(Keyword("where").suppress() + Literal(":").suppress() + ENDL + plot_conditions)
         direct_import_statement = Group(
             Keyword("import") +
             path.setResultsName(Names.import_path)
@@ -143,7 +143,7 @@ class Program:
         ).setResultsName(Names.import_result_name)
         self.importStmt = (direct_import_statement | from_import_statement) + ENDL
         stmt = self.typeDef | self.ruleDef | self.analysisStmt \
-               | self.blankStmt | self.commentStmt | self.importStmt | self.plotStmt
+               | self.blankStmt | self.commentStmt | self.importStmt | self.plotBlock
 
         self.program = OneOrMore(stmt)
         self.program.ignore(self.commentStmt)
@@ -214,7 +214,7 @@ class Program:
                     """.format(e, s)
                 )
 
-        def do_plotStmt(s, l, t):
+        def do_plotBlock(s, l, t):
             self.ast_nodes.append(PlotNode(t))
 
         for name in all_names:
