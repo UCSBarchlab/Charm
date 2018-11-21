@@ -47,6 +47,7 @@ class CharmKernel(Kernel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.code_cache = ""
+        self.category_id_map = {}
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
         self.send_response(
@@ -60,7 +61,19 @@ class CharmKernel(Kernel):
         if self.__code_complete():
             try:
                 logging.log(logging.DEBUG, self.code_cache)
-                result = Program(self.code_cache, args).run()
+
+                def send_progress(value):
+                    self.send_response(
+                        stream=self.iopub_socket,
+                        msg_or_type="display_data",
+                        content={
+                            'data': {
+                                'text/plain': value
+                            }
+                        }
+                    )
+
+                result = Program(self.code_cache, args, send_progress).run()
                 if not silent:
                     if 'raw' in result:
                         self.send_response(
@@ -75,15 +88,15 @@ class CharmKernel(Kernel):
                     if 'img' in result:
                         for image in result['img']:
                             if image is not None:
-                                    self.send_response(
-                                        stream=self.iopub_socket,
-                                        msg_or_type='display_data',
-                                        content={
-                                            'data':{
-                                                'image/png': base64.encodebytes(image).decode()
-                                            }
+                                self.send_response(
+                                    stream=self.iopub_socket,
+                                    msg_or_type='display_data',
+                                    content={
+                                        'data': {
+                                            'image/png': base64.encodebytes(image).decode()
                                         }
-                                    )
+                                    }
+                                )
                 return {
                     "status": "ok",
                     "execution_count": self.execution_count

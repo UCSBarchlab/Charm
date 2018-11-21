@@ -14,7 +14,7 @@ imported = []
 
 
 class Program:
-    def __init__(self, source, args=None):
+    def __init__(self, source, args=None, callback=lambda x: None):
         all_names = '''
         typeDef
         ruleDef
@@ -34,6 +34,7 @@ class Program:
                                         Names.clone_ext.join(p.group(2).split('.')), source)
         self.imported = []
         self.args = args
+        self.callback = callback
         COLON = Literal(':').suppress()
         COMMA = Literal(',')
         LPA = Literal('(')
@@ -82,7 +83,7 @@ class Program:
         struct = (list_struct ^ tuple_struct).setName('struct')
 
         component << (term ^ varName ^ func ^ struct)
-        arg << (component ^ expression ^ equation ^ struct ^ constraint)
+        var = arg << (component ^ expression ^ equation ^ struct ^ constraint)
         arglist << (LPA + Optional(arg + ZeroOrMore(COMMA + arg)) + RPA)
         expression << ((Optional(BS) + component +
                         ZeroOrMore(operator + expression)) ^ (LPA + expression + RPA))
@@ -238,7 +239,7 @@ class Program:
                     n.dump()
 
         program = _Nodes(self.ast_nodes)
-        interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples)
+        interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples, self.callback)
         # interp.test_gc_overhead()
         result = interp.run()
         if save:

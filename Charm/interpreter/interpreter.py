@@ -44,8 +44,9 @@ def getBaseName(name):
 
 
 class Interpreter(object):
-    def __init__(self, program, use_z3=False, drawable=False, mcsamples=100):
+    def __init__(self, program, use_z3=False, drawable=False, mcsamples=100, process_callback=lambda x: None):
         # This sets the sample number for MC.
+        # Callback: f(category,message)
         mcerp.npts = mcsamples
         self.use_z3 = use_z3
         self.drawable = drawable
@@ -66,6 +67,7 @@ class Interpreter(object):
         self.v2l = {}  # Variable name to LetNode.
         self.plot_nodes = []  # Plot tasks
         self.stack = deque()
+        self.process_callback = process_callback
 
     def type_check(self, var, ival):
         """ Checks constraints associated with type.
@@ -193,7 +195,7 @@ class Interpreter(object):
                         logging.debug('[{}]: {} --> {}'.format(cur.id, cur.id, cur.next(e).id))
                         all_marked = all_marked & self.DFS(cur.next(e))
                         if not all_marked:
-                            break;
+                            break
                     if all_marked:
                         logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
                         assert self.stack.pop() == cur.id
@@ -540,9 +542,10 @@ class Interpreter(object):
                 self.evaluate_graph(self.v2n[node.out_name], node.out_name, node.out_val)
         else:
             assert node.getType() == NodeType.CONSTRAINT, \
-                'Unknown node type {} when evaluatig node {}'.format(node.getPrintable())
+                'Unknown node type {} when evaluatig node {}'.format(*node.getPrintable())
 
     def build_dependency_graph(self):
+        self.process_callback('building dependency callback')
         self.v2n = {}  # variable name -> graph node
         for v in self.var_set:
             self.v2n[v] = GraphNode(NodeType.VARIABLE, v)
@@ -706,6 +709,7 @@ class Interpreter(object):
         return exts
 
     def link(self):
+        self.process_callback('linking')
         type_nodes = [n for n in self.nodes if isinstance(n, TypeNode)]
         for t in type_nodes:
             self.n2t[t.name] = t
@@ -813,6 +817,7 @@ class Interpreter(object):
         return [int(i) for i in content]
 
     def gen_inputs(self):
+        self.process_callback('generating callback')
         tup_given = {}
         for k, v in self.given.items():
             if self.v2l[k].path:
@@ -1004,6 +1009,7 @@ class Interpreter(object):
                 self.result[tar] = solution[tar]
 
     def solveDetermined(self):
+        self.process_callback('solving')
         results = defaultdict(list)
         iter_vars = []
         flat_iter_vars = []
@@ -1020,25 +1026,18 @@ class Interpreter(object):
         proped_vals = dict([(k, None) for k in flat_iter_vars])
         last_proped_vals = None
         start = timer()
-        # Changed the mechanism so that every variable is iterable, maybe not need the code below any more
-        # for key, val in self.given.items():
-        #     for k, v in zip(key, val):
-        #         # Propagate non-iterables first.
-        #         if not k in flat_iter_vars and k in self.v2n:
-        #             self.evaluate_graph(self.v2n[k], k, v)
-        # # If we are done with inputs.
-        # if not iter_vars:
-        #     if self.graph.eval_constraints():
-        #         for tar in self.targets:
-        #             logging.debug('Result {}: {}'.format(tar, self.v2n[tar].out_val))
-        # Handle iterations.
+        total = 1
+        for val in iter_vals:
+            total *= len(val)
+        i = 0
         for t in itertools.product(*tuple(iter_vals)):
+            i += 1
+            if i % (total // 20) == 0:
+                self.process_callback('Solving {}% finished'.format(i * 100 / total))
             for key, val in zip(iter_vars, t):
-                # if not isinstance(val,list) or not isinstance(val,tuple):
-                #     val=[val]
                 for k, v in zip(key, val):
                     proped_vals[k] = v
-                    tag = tuple([proped_vals[var] for var in flat_iter_vars])
+                tag = tuple([proped_vals[var] for var in flat_iter_vars])
                 if tag not in already_evaluated:
                     already_evaluated.add(tag)
                     difference = dict([(tmp_k, proped_vals[tmp_k])
@@ -1068,6 +1067,7 @@ class Interpreter(object):
         # logging.log(logging.INFO, 'Time used: {}'.format(end - start))
 
     def __plot(self, node: PlotNode):
+        self.process_callback('plotting')
         if node.dependent not in self.targets:
             logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
             return
