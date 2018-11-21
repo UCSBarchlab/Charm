@@ -73,7 +73,7 @@ class CharmKernel(Kernel):
                         }
                     )
 
-                result = Program(self.code_cache, args, send_progress).run()
+                result = Program(self.code_cache, args, send_progress).run(save=True)
                 if not silent:
                     if 'raw' in result:
                         self.send_response(
@@ -81,22 +81,22 @@ class CharmKernel(Kernel):
                             msg_or_type='display_data',
                             content={
                                 'data': {
-                                    'text/plain': str(dict(result['raw']))
+                                    'text/plain': 'raw data can be found in {}, images can be found in {}'.format(
+                                        result['raw'], result['img'])
                                 }
                             }
                         )
-                    if 'img' in result:
-                        for image in result['img']:
-                            if image is not None:
-                                self.send_response(
-                                    stream=self.iopub_socket,
-                                    msg_or_type='display_data',
-                                    content={
-                                        'data': {
-                                            'image/png': base64.encodebytes(image).decode()
-                                        }
+                    for image in result['img_raw']:
+                        if image is not None:
+                            self.send_response(
+                                stream=self.iopub_socket,
+                                msg_or_type='display_data',
+                                content={
+                                    'data': {
+                                        'image/png': base64.encodebytes(image).decode()
                                     }
-                                )
+                                }
+                            )
                 return {
                     "status": "ok",
                     "execution_count": self.execution_count

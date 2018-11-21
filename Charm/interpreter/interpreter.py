@@ -1167,7 +1167,14 @@ class Interpreter(object):
         with open(file_name, 'wb') as ofile:
             pickle.dump(self.result, ofile)
             ofile.close()
+        img_names = []
         for node, img in zip(self.plot_nodes, self.images):
-            filename = '{}_against_{}'.format(node.dependent, node.free)
+            filename = '{}_against_{}.png'.format(node.dependent, node.free)
             with open(filename, 'wb') as f:
                 f.write(img)
+            img_names.append(filename)
+        return {
+            'raw': file_name,
+            'img': img_names,
+            'img_raw': self.images
+        }

@@ -243,5 +243,5 @@ class Program:
         # interp.test_gc_overhead()
         result = interp.run()
         if save:
-            interp.save()
+            return interp.save()
         return result
