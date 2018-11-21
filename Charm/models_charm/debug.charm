@@ -97,4 +97,6 @@ assume fraction_parallelism = [0.999, 0.5]
 #assume (tech_node, perf_scale_factor, power_scale_factor) = [(45, 1., 1.), (32, Gauss(1.095, sigma * 0.005, 1), Gauss(.685, sigma * 0.025, 0)), (22, Gauss(1.785, sigma * 0.595, 1), Gauss(.53, sigma * .01, 0)), (16, Gauss(2.23, sigma * 0.98, 1), Gauss(0.385, sigma * 0.005, 0)), (11, Gauss(2.735, sigma * 1.435, 1), Gauss(0.27, sigma * 0.02, 0)), (8, Gauss(2.595, sigma * 1.255, 1), Gauss(0.17, sigma * 0.05, 0))]
 assume (tech_node, perf_scale_factor, power_scale_factor) = [(45, 1., 1.), (32, 1.09, .66), (22, 2.38, .54), (16, 3.21, .38), (11, 4.17, .25), (8, 3.85, .12)]
 explore speedup, dark_ratio, core_num
-plot speedup against ref_big_core_performance,ref_small_core_performance with tech_node=[45,32],fraction_parallelism=[0.999] as scatter
+plot speedup against ref_big_core_performance,ref_small_core_performance as scatter where:
+	tech_node=[45,32]
+	fraction_parallelism=[0.999]

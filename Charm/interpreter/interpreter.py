@@ -1094,8 +1094,7 @@ class Interpreter(object):
                 plot_data[tuple(tag)].append(
                     [value[all_variables.index(i)] for i in node.free] + [value[all_variables.index(node.dependent)]]
                 )
-        handles = []
-        legends = []
+        plotted = False
         # Iterate through each possible combination of values of unrelated variables and plot separately each
         if len(node.free) == 1:
             ax = plt.subplot(111)
@@ -1106,12 +1105,12 @@ class Interpreter(object):
             xs = [i[:-1] for i in plot_data[tag]]
             y = [i[-1] for i in plot_data[tag]]
             if len(xs) > 0:
+                plotted = True
                 if len(xs[0]) == 1:
-                    handles.append(getattr(ax, node.plot_type)(xs, y))
-                    legends.append(tag)
+                    getattr(ax, node.plot_type)(xs, y, label=tag)
                 else:
-                    handles.append(getattr(ax, node.plot_type)([i[0] for i in xs], [i[1] for i in xs], y))
-        if len(handles) > 0:
+                    getattr(ax, node.plot_type)([i[0] for i in xs], [i[1] for i in xs], y, label=tag)
+        if plotted:
             if len(node.free) == 1:
                 ax.set_xlabel(node.free[0])
                 ax.set_ylabel(node.dependent)
@@ -1119,10 +1118,13 @@ class Interpreter(object):
                 ax.set_xlabel(node.free[0])
                 ax.set_ylabel(node.free[1])
                 ax.set_zlabel(node.dependent)
+            ax.legend()
             image = io.BytesIO()
             plt.savefig(image, dpi='figure')
             plt.clf()
             return image
+        else:
+            logging.error('No feasible value when plotting {}, aborting'.format(node.dependent))
 
     def run(self):
         self.link()
