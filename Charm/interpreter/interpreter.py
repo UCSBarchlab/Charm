@@ -8,17 +8,14 @@ from timeit import default_timer as timer
 import mcerp3 as mcerp
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
-from networkx.algorithms import bipartite as biGraph
 from sympy import simplify
 from sympy.parsing.sympy_parser import _token_splittable
 from sympy.utilities.lambdify import lambdify, lambdastr
 
 from Charm.base.helpers import *
 from Charm.models import Dummy
-from Charm.utils.random_graph_generator import RandomGraph
 from .graph import *
 from .smt_wrapper import SMTInstance
-from .z3core import graph_transform_z3
 
 
 def hasExtName(name):
@@ -110,220 +107,6 @@ class Interpreter(object):
                             return False
                     else:
                         return expr.subs(typeNode.use, val)
-
-    def DFS(self, cur):
-        if cur.marked:
-            logging.debug('[{}]: {} marked'.format(cur.id, cur.id))
-            return True
-
-        logging.debug('[{}]: push {} ({} edges)'.format(cur.id, cur.id, len(cur.edges)))
-        assert cur.id not in self.stack
-        self.stack.append(cur.id)
-        logging.debug('stack: {}'.format(self.stack))
-
-        indegree = outdegree = 0
-        # First, get current indegree and outdegree.
-        for e in cur.edges:
-            if e.isDirected():
-                if e.src is cur and e.dst.marked:
-                    outdegree += 1
-                    logging.debug('[{}]: {} {} {}'.format(
-                        cur.id, cur.id, '->' if not e.fixed else '=>', e.dst.id))
-                elif e.dst is cur and e.src.marked:
-                    assert e.dst is cur
-                    indegree += 1
-                    logging.debug('[{}]: {} {} {}'.format(
-                        cur.id, e.src.id, '->' if not e.fixed else '=>', cur.id))
-                else:
-                    continue
-
-        flexibles = cur.getFlexibleEdges()
-
-        cur.mark()
-
-        if not flexibles:
-            if not cur.has_conflict()[0]:
-                logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                assert self.stack.pop() == cur.id
-                cur.unmark()
-                return True
-            else:
-                logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                assert self.stack.pop() == cur.id
-                cur.unmark()
-                return False
-
-        if cur.getType() == NodeType.INPUT or cur.getType() == NodeType.CONSTRAINT:
-            raise ValueError('Input/Costraint node {} seen during DFS'.format(cur.id))
-        elif cur.getType() == NodeType.VARIABLE:
-            if indegree == 1:
-                logging.debug('[{}]: {} VAR indegree = 1'.format(cur.id, cur.id))
-                for e in flexibles:
-                    e.set(cur, cur.next(e))
-                    logging.debug('[{}]: setting {}->{}'.format(cur.id, e.src.id, e.dst.id))
-                all_marked = True
-                for e in cur.edges:
-                    logging.debug('[{}]: {} --> {}'.format(cur.id, cur.id, cur.next(e).id))
-                    all_marked = all_marked & self.DFS(cur.next(e))
-                    if not all_marked:
-                        break
-                if all_marked:
-                    logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                    assert self.stack.pop() == cur.id
-                    cur.unmark()
-                    return True
-                else:
-                    for e in flexibles:
-                        if not cur.next(e).marked:
-                            logging.debug('[{}]: resetting {}->{}'.format(cur.id, e.src.id, e.dst.id))
-                            e.reset()
-                    logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                    assert self.stack.pop() == cur.id
-                    cur.unmark()
-                    return False
-            elif indegree == 0:
-                logging.debug('[{}]: {} VAR indegree = 0'.format(cur.id, cur.id))
-                for in_e in flexibles:
-                    in_e.set(cur.next(in_e), cur)
-                    logging.debug('[{}]: setting {}->{}'.format(cur.id, in_e.src.id, in_e.dst.id))
-                    for e in flexibles:
-                        if not e == in_e:
-                            e.set(cur, cur.next(e))
-                            logging.debug('[{}]: setting {}->{}'.format(cur.id, e.src.id, e.dst.id))
-                    all_marked = True
-                    for e in cur.edges:
-                        logging.debug('[{}]: {} --> {}'.format(cur.id, cur.id, cur.next(e).id))
-                        all_marked = all_marked & self.DFS(cur.next(e))
-                        if not all_marked:
-                            break
-                    if all_marked:
-                        logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                        assert self.stack.pop() == cur.id
-                        cur.unmark()
-                        return True
-                    else:
-                        for e in flexibles:
-                            if not cur.next(e).marked:
-                                logging.debug('[{}]: resetting {}->{}'.format(
-                                    cur.id, e.src.id, e.dst.id))
-                                e.reset()
-                logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                assert self.stack.pop() == cur.id
-                cur.unmark()
-                return False
-            else:
-                logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                assert self.stack.pop() == cur.id
-                cur.unmark()
-                return False
-        else:
-            assert cur.getType() == NodeType.EQUATION
-            if outdegree == 1:
-                logging.debug('[{}]: {} outdegree = 1'.format(cur.id, cur.id))
-                for e in flexibles:
-                    e.set(cur.next(e), cur)
-                    logging.debug('[{}]: setting {}->{}'.format(cur.id, e.src.id, e.dst.id))
-                all_marked = True
-                for e in cur.edges:
-                    logging.debug('[{}]: {} --> {}'.format(cur.id, cur.id, cur.next(e).id))
-                    all_marked = all_marked & self.DFS(cur.next(e))
-                    if not all_marked:
-                        break
-                if all_marked:
-                    logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                    assert self.stack.pop() == cur.id
-                    cur.unmark()
-                    return True
-                else:
-                    for e in flexibles:
-                        if not cur.next(e).marked:
-                            logging.debug('[{}]: resetting {}->{}'.format(cur.id, e.src.id, e.dst.id))
-                            e.reset()
-                    logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                    assert self.stack.pop() == cur.id
-                    cur.unmark()
-                    return False
-            elif outdegree == 0:
-                logging.debug('[{}]: {} outdegree = 0'.format(cur.id, cur.id))
-                for out_e in flexibles:
-                    out_e.set(cur, cur.next(out_e))
-                    logging.debug('[{}]: setting {}->{}'.format(cur.id, out_e.src.id, out_e.dst.id))
-                    for e in flexibles:
-                        if not e == out_e:
-                            e.set(cur.next(e), cur)
-                            logging.debug('[{}]: setting {}->{}'.format(cur.id, e.src.id, e.dst.id))
-                    all_marked = True
-                    for e in cur.edges:
-                        logging.debug('[{}]: {} --> {}'.format(cur.id, cur.id, cur.next(e).id))
-                        all_marked = all_marked & self.DFS(cur.next(e))
-                        if not all_marked:
-                            break
-                    if all_marked:
-                        logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                        assert self.stack.pop() == cur.id
-                        cur.unmark()
-                        return True
-                    else:
-                        for e in flexibles:
-                            if not cur.next(e).marked:
-                                logging.debug('[{}]: resetting {}->{}'.format(
-                                    cur.id, e.src.id, e.dst.id))
-                                e.reset()
-                logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                assert self.stack.pop() == cur.id
-                cur.unmark()
-                return False
-            else:
-                logging.debug('[{}]: pop {}'.format(cur.id, cur.id))
-                assert self.stack.pop() == cur.id
-                cur.unmark()
-                return False
-
-    def convert_to_functional_graph_using_z3(self):
-        self.graph.draw('Unmarked')
-        input_map = {}
-        for n in self.graph.node_set:
-            if n.getType() == NodeType.INPUT:
-                input_map[n.val] = True
-            elif n.getType() == NodeType.VARIABLE:
-                input_map[n.val] = False
-            else:
-                continue
-        input_eq_map = dict([(n.id, n.val.names) for n in self.graph.getNextEqNode()])
-        solution, time = graph_transform_z3(input_map, input_eq_map)
-        logging.debug('z3 input map: {}'.format(input_map))
-        logging.debug('z3 eq map: {}'.format(input_eq_map))
-        if not solution:
-            # This is either underdetermined or inconsistent.
-            return False, time
-        else:
-            logging.debug('z3 solution: {}'.format(solution))
-            # Update edges of equation nodes.
-            for eq_id in list(solution.keys()):
-                if not solution[eq_id]:
-                    # Then this equation is a constraint.
-                    for n in self.graph.node_set:
-                        if n.id == eq_id:
-                            n.setType(NodeType.CONSTRAINT)
-                else:
-                    for n in self.graph.node_set:
-                        # Get the equation node.
-                        if n.id == eq_id:
-                            for e in n.edges:
-                                # Find the outgoing variable node.
-                                if n.next(e).val == solution[eq_id]:
-                                    # Set direction fix to False so that we can use
-                                    # the same graph for other tests.
-                                    e.set(n, n.next(e), False)
-                                else:
-                                    e.set(n.next(e), n, False)
-            # Update edges of constraint nodes.
-            for n in self.graph.getNextConNode():
-                for e in n.edges:
-                    e.set(n.next(e), n, False)
-            self.graph.check()
-            self.graph.draw('z3_marked')
-            return True, time
 
     def convert_to_functional_graph(self):
         graph = nx.Graph()
@@ -843,41 +626,6 @@ class Interpreter(object):
         # Add assumptions to given dict.
         for k, v in self.assumptions.items():
             self.given[(k,)] = [(eval(v),)]
-
-    def test_gc_overhead(self):
-        # Test time overhead for graph conversion.
-        dfs_time = 0.
-        z3_time = 0.
-        mm_time = 0.
-        N = 10
-        N_edges = 0
-        S_density = 0
-        for i in range(N):
-            rg = RandomGraph(7, 7, sparse=True, drawable=self.drawable)
-            self.graph = rg.getGraph()
-            N_edges += len(self.graph.edge_set)
-            if self.use_z3:
-                solvable, time = self.convert_to_functional_graph_using_z3()
-                z3_time += time
-            for e in self.graph.edge_set:
-                e.reset()
-            start = timer()
-            dfs_solvable = self.convert_to_functional_graph()
-            end = timer()
-            if self.use_z3:
-                assert solvable == dfs_solvable
-            dfs_time += end - start
-            self.graph = rg.getNxGraph()
-            S_density += nx.density(self.graph)
-            start = timer()
-            biGraph.maximum_matching(self.graph)
-            end = timer()
-            mm_time += end - start
-        logging.log(logging.DEBUG, 'Avg # of edges: {}'.format(N_edges * 1. / N))
-        logging.log(logging.DEBUG, 'Avg z3 time used: {}'.format(z3_time / N))
-        logging.log(logging.DEBUG, 'Avg dfs time used: {}'.format(dfs_time / N))
-        logging.log(logging.DEBUG, 'Avg mm time used: {}'.format(mm_time / N))
-        return True
 
     def optimizeSMT(self, smt, knobs, k2s=None, minimize=True):
         """ Turns SMT solving to optimization by iteratively adding
