@@ -9,22 +9,7 @@ from .interpreter.parser import Program
 
 args = namedtuple('arg', ['verbose', 'z3core', 'draw', 'mcsamples'])
 args.verbose = False
-# Bug found: when executing:
-# Traceback (most recent call last):
-#   File "/home/bill/Documents/research/Charm/venv/lib/python3.6/site-packages/Charm/charm_jupyter_kernel.py", line 48, in do_execute
-#     result = Program(self.code_cache, args).run()
-#   File "/home/bill/Documents/research/Charm/venv/lib/python3.6/site-packages/Charm/interpreter/parser.py", line 244, in run
-#     result = interp.run()
-#   File "/home/bill/Documents/research/Charm/venv/lib/python3.6/site-packages/Charm/interpreter/interpreter.py", line 1151, in run
-#     consistent_and_determined, _ = self.convert_to_functional_graph_using_z3()
-#   File "/home/bill/Documents/research/Charm/venv/lib/python3.6/site-packages/Charm/interpreter/interpreter.py", line 289, in convert_to_functional_graph_using_z3
-#     solution, time = graph_transform_z3(input_map, input_eq_map)
-#   File "/home/bill/Documents/research/Charm/venv/lib/python3.6/site-packages/Charm/interpreter/z3core.py", line 22, in graph_transform_z3
-#     exec("%s = z3.Bool('%s')" % (inp, inp))
-#   File "<string>", line 1, in <module>
-# AttributeError: module 'z3' has no attribute 'Bool'
-# TODO Fix it before setting z3core to True
-args.z3core = False
+args.z3core = True
 args.draw = False
 args.mcsamples = 100
 kernel = True
