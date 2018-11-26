@@ -60,6 +60,7 @@ class Names(object):
     plot_given_variable="plot_given_variable"
     plot_given_value="plot_given_value"
     plot_given_condition="plot_given_condition"
+    plot_body = "plot_body"
     plot_statement = "plot_statement"
     # Function keywords. 
     builtin = {'Eq', 'exp', 'log', norm_dist, 'range', 'floor', 'ceiling', summation, product, 'floor', 'ufloor',
@@ -390,7 +391,6 @@ class SolveNode(Node):
 
 
 class PlotNode(Node):
-    all_plot_functions = ['plot','scatter']
 
     def __init__(self, toks):
         super().__init__()
@@ -402,12 +402,11 @@ class PlotNode(Node):
         self.free = self.toks[Names.plot_free_variable]
         if Names.plot_given_condition in self.toks:
             self.given_var_dict={
-                condition[Names.plot_given_variable]:eval(''.join(condition[Names.plot_given_value]))
-                for condition in self.toks[Names.plot_given_condition]
+                condition[0]: eval(''.join(condition[1:]))
+                for condition in self.toks[Names.plot_given_condition][0]
             }
         else:
             self.given_var_dict={}
-        assert self.toks[Names.plot_type] in PlotNode.all_plot_functions
         self.plot_type=self.toks[Names.plot_type]
 
     def exportZ3(self):

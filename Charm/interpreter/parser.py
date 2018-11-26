@@ -14,7 +14,7 @@ imported = []
 
 
 class Program:
-    def __init__(self, source, args=None):
+    def __init__(self, source, args=None, callback=lambda x: None):
         all_names = '''
         typeDef
         ruleDef
@@ -22,7 +22,7 @@ class Program:
         assumeStmt
         solveStmt
         importStmt
-        plotStmt
+        plotBlock
         '''.split()
         COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
         NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
@@ -34,6 +34,7 @@ class Program:
                                         Names.clone_ext.join(p.group(2).split('.')), source)
         self.imported = []
         self.args = args
+        self.callback = callback
         COLON = Literal(':').suppress()
         COMMA = Literal(',')
         LPA = Literal('(')
@@ -82,7 +83,7 @@ class Program:
         struct = (list_struct ^ tuple_struct).setName('struct')
 
         component << (term ^ varName ^ func ^ struct)
-        arg << (component ^ expression ^ equation ^ struct ^ constraint)
+        var = arg << (component ^ expression ^ equation ^ struct ^ constraint)
         arglist << (LPA + Optional(arg + ZeroOrMore(COMMA + arg)) + RPA)
         expression << ((Optional(BS) + component +
                         ZeroOrMore(operator + expression)) ^ (LPA + expression + RPA))
@@ -116,13 +117,13 @@ class Program:
         self.analysisStmt = (self.givenStmt | self.assumeStmt | self.solveStmt) + ENDL
         self.blankStmt = Suppress((LineStart() + LineEnd()) ^ White()).setName('blankStmt')
         self.commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
-        plot_given_condition=term(Names.plot_given_variable)+Literal("=").suppress()+list_struct(Names.plot_given_value)
-        plot_free_variable_list = Group(term + ZeroOrMore(COMMA.suppress() + term))(Names.plot_free_variable)
-        self.plotStmt = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
-                        + Keyword("against").suppress() + plot_free_variable_list \
-                        + Optional(Keyword("with").suppress() + Group(
-            plot_given_condition + ZeroOrMore(COMMA + plot_given_condition)))(Names.plot_given_condition) \
-                        + Keyword("as").suppress() + Word(alphas)(Names.plot_type) + ENDL
+        plot_given_condition = Group(term + Literal("=").suppress() + list_struct)
+        plot_free_variable_list = Group(term + Optional(COMMA.suppress() + term))(Names.plot_free_variable)
+        plot_conditions = indentedBlock(OneOrMore(plot_given_condition + ENDL), indentStack)(Names.plot_given_condition)
+        self.plotBlock = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
+                         + Keyword("against").suppress() + plot_free_variable_list \
+                         + Keyword("as").suppress() + Word(alphas)(Names.plot_type) \
+                         + Optional(Keyword("where").suppress() + Literal(":").suppress() + ENDL + plot_conditions)
         direct_import_statement = Group(
             Keyword("import") +
             path.setResultsName(Names.import_path)
@@ -143,7 +144,7 @@ class Program:
         ).setResultsName(Names.import_result_name)
         self.importStmt = (direct_import_statement | from_import_statement) + ENDL
         stmt = self.typeDef | self.ruleDef | self.analysisStmt \
-               | self.blankStmt | self.commentStmt | self.importStmt | self.plotStmt
+               | self.blankStmt | self.commentStmt | self.importStmt | self.plotBlock
 
         self.program = OneOrMore(stmt)
         self.program.ignore(self.commentStmt)
@@ -214,7 +215,7 @@ class Program:
                     """.format(e, s)
                 )
 
-        def do_plotStmt(s, l, t):
+        def do_plotBlock(s, l, t):
             self.ast_nodes.append(PlotNode(t))
 
         for name in all_names:
@@ -238,9 +239,9 @@ class Program:
                     n.dump()
 
         program = _Nodes(self.ast_nodes)
-        interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples)
+        interp = Interpreter(program, self.args.z3core, self.args.draw, self.args.mcsamples, self.callback)
         # interp.test_gc_overhead()
         result = interp.run()
         if save:
-            interp.save()
+            return interp.save()
         return result
