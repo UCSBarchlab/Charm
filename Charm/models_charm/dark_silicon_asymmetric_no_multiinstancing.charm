@@ -11,10 +11,10 @@ typedef Fraction : float f
     f <= 1
 
 define core_area_scale:
-    ref_big_core_area : R+ as a1b
-    ref_small_core_area : R+ as a1s
-    big_core_area : R+ as a2b
-    small_core_area : R+ as a2s
+    ref_big_core_area : R+ as a1b in mm^2
+    ref_small_core_area : R+ as a1s in mm^2
+    big_core_area : R+ as a2b in mm^2
+    small_core_area : R+ as a2s in mm^2
     ref_tech_node : I+ as t1
     tech_node : I+ as t2
     a1b / (t1 ** 2) = a2b / (t2 ** 2) 
@@ -32,10 +32,10 @@ define perf_scale:
     new_sperf = a * sperf
 
 define power_scale:
-    ref_big_core_power : R+ as bpower
-    big_core_power : R+ as new_bpower
-    ref_small_core_power : R+ as spower
-    small_core_power : R+ as new_spower
+    ref_big_core_power : R+ as bpower in kW
+    big_core_power : R+ as new_bpower in kW
+    ref_small_core_power : R+ as spower in kW
+    small_core_power : R+ as new_spower in kW
     power_scale_factor : R+ as a
     tech_node : I+ as t
     a = Piecewise((1., t=45), (0.66, t=32), (0.54, t=22), (0.38, t=16), (0.25, t=11), (0.12, t=8))
@@ -44,39 +44,39 @@ define power_scale:
 
 define perf2area_45nm:
     ref_big_core_performance : I+ as bperf
-    ref_big_core_area : R+ as ba
+    ref_big_core_area : R+ as ba in mm^2
     ref_small_core_performance : I+ as sperf
-    ref_small_core_area : R+ as sa
+    ref_small_core_area : R+ as sa in mm^2
     ba = 0.0152 * bperf ** 2 + 0.0265 * bperf + 7.4393
     sa = 0.0152 * sperf ** 2 + 0.0265 * sperf + 7.4393
 
 define perf2power_45nm:
     ref_big_core_performance : I+ as bperf
-    ref_big_core_power : R+ as bpower
+    ref_big_core_power : R+ as bpower in kW
     ref_small_core_performance : I+ as sperf
-    ref_small_core_power : R+ as spower
+    ref_small_core_power : R+ as spower in kW
     bpower = 0.0002 * bperf ** 3 + 0.0009 * bperf ** 2 + 0.3859 * bperf - 0.0301
     spower = 0.0002 * sperf ** 3 + 0.0009 * sperf ** 2 + 0.3859 * sperf - 0.0301
 
 define amdahl_law:
     speedup : R+ as sp
-    serial_execution_time : R+ as st
-    parallel_execution_time : R+ as pt
+    serial_execution_time : R+ as st in hour
+    parallel_execution_time : R+ as pt in hour
     sp = 1 / (st + pt)
 
 define dynamic_cmp:
     big_core_performance : R+ as big_P
     small_core_performance : R+ as small_P
     fraction_parallelism : Fraction as F
-    chip_area : R+ as A
-    big_core_area : R+ as big_a
-    small_core_area : R+ as small_a
-    thermal_design_power : R+ as TDP
-    big_core_power : R+ as big_p
-    small_core_power : R+ as small_p
+    chip_area : R+ as A in mm^2
+    big_core_area : R+ as big_a in mm^2
+    small_core_area : R+ as small_a in mm^2
+    thermal_design_power : R+ as TDP in kW
+    big_core_power : R+ as big_p in kW
+    small_core_power : R+ as small_p in kW
     core_num : I+ as N
-    serial_execution_time : R+ as st
-    parallel_execution_time : R+ as pt
+    serial_execution_time : R+ as st in hour
+    parallel_execution_time : R+ as pt in hour
     st = (1 - F)/big_P
     pt = F / (small_P * N)
     N = umin(ufloor((A - big_a)/small_a), ufloor((TDP - big_p)/small_p))
@@ -84,9 +84,9 @@ define dynamic_cmp:
 
 define dark_silicon_ratio:
     core_num : I+ as N
-    small_core_area : R+ as a
-    big_core_area : R+ as ba
-    chip_area : R+ as A
+    small_core_area : R+ as a in mm^2
+    big_core_area : R+ as ba in mm^2
+    chip_area : R+ as A in mm^2
     dark_ratio : Fraction as D
     D = 1 - (ba + N * a) / A
 

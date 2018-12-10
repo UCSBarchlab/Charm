@@ -9,12 +9,12 @@ ParserElement.setDefaultWhitespaceChars(' ')
 
 args = None
 
-indentStack = [1]
-imported = []
+
 
 
 class Program:
     def __init__(self, source, args=None, callback=lambda x: None):
+        indent_stack = [1]
         all_names = '''
         typeDef
         ruleDef
@@ -65,7 +65,7 @@ class Program:
         typeDecl = (Literal('typedef') + typeName(Names.typeName) + COLON +
                     pyType(Names.pyTypeName) + term(Names.shortName) + ENDL)
         typeBody = indentedBlock(constraint(Names.constraint) ^ equation(Names.equation),
-                                 indentStack)(Names.typeBody)
+                                 indent_stack)(Names.typeBody)
         # TODO maybe implement physical unit wildcard and infer in the future
         varDecl = (varName(Names.varName) + COLON + typeName(Names.typeName) +
                    Optional(Literal('as') + term(Names.shortName)) + Optional(
@@ -73,7 +73,7 @@ class Program:
 
         ruleDecl = (Literal('define') + term(Names.ruleName) + COLON + ENDL)
         ruleBody = indentedBlock(varDecl ^ constraint(Names.constraint) ^ equation(Names.equation),
-                                 indentStack)(Names.ruleBody)
+                                 indent_stack)(Names.ruleBody)
 
         list_struct = Optional(term) + Literal('[') + arg + \
                       ZeroOrMore(COMMA + arg) + Literal(']') + \
@@ -119,10 +119,11 @@ class Program:
         self.commentStmt = (Literal('#') + restOfLine + ENDL).setName('comment')
         plot_given_condition = Group(term + Literal("=").suppress() + list_struct)
         plot_free_variable_list = Group(term + Optional(COMMA.suppress() + term))(Names.plot_free_variable)
-        plot_conditions = indentedBlock(OneOrMore(plot_given_condition + ENDL), indentStack)(Names.plot_given_condition)
+        plot_conditions = indentedBlock(OneOrMore(plot_given_condition + ENDL), indent_stack)(
+            Names.plot_given_condition)
         self.plotBlock = Keyword("plot").suppress() + term(Names.plot_dependent_variable) \
                          + Keyword("against").suppress() + plot_free_variable_list \
-                         + Keyword("as").suppress() + Word(alphas)(Names.plot_type) \
+                         + Keyword("as").suppress() + term(Names.plot_type) \
                          + Optional(Keyword("where").suppress() + Literal(":").suppress() + ENDL + plot_conditions)
         direct_import_statement = Group(
             Keyword("import") +
@@ -206,6 +207,9 @@ class Program:
                 self.rule_nodes += rules
                 self.type_nodes += types
                 self.ast_nodes += types + rules
+            except ParseException as e:
+                logging.fatal("Fatal error:\n{}\n{}\n{}".format(e.line, " " * (e.column - 1) + "^", e))
+                raise
             except Exception as e:
                 raise SyntaxError(
                     """
