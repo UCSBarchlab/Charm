@@ -1,6 +1,7 @@
 from Charm.interpreter.parser import *
 from Charm.utils.charm_options import *
 
+logging.basicConfig(level=logging.INFO)
 
 def main():
     ParserElement.setDefaultWhitespaceChars(' ')

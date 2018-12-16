@@ -784,12 +784,18 @@ class Interpreter(object):
                         # for k in proped_vals: # w/ redundant computation
                         self.evaluate_graph(self.v2n[k], k, proped_vals[k])
                     if self.graph.eval_constraints():
+                        tmp_value = []
                         for tar in self.targets:
                             if self.type_check(tar, self.v2n[tar].out_val):
                                 # results[tar].append((tag, self.v2n[tar].out_val))
                                 results[tag].append(self.v2n[tar].out_val)
 
                                 logging.info('Result {} -> {} = {}'.format(tag, tar, self.v2n[tar].out_val))
+                            else:
+                                results[tag].append(float("nan"))
+
+                                logging.info('Result {} -> {} = {}'.format(tag, tar, float("nan")))
+
         end = timer()
 
         self.result = results
@@ -812,15 +818,16 @@ class Interpreter(object):
             for free_var in node.free:
                 if free_var in vars:
                     correlated_with_free_variables += list(vars)
+        correlated_with_free_variables.append(node.dependent)
         # Compute values for unrelated variables
         for value in all_values:
             tag = []
             for k, v in zip(all_variables, value):
-                if k not in correlated_with_free_variables:
-                    if k in node.given_var_dict:
-                        if v not in node.given_var_dict[k]:
-                            break
-                    tag.append(v)
+                if k not in node.given_var_dict:
+                    continue
+                if k in node.given_var_dict and v not in node.given_var_dict[k]:
+                    break
+                tag.append(v)
             else:
                 plot_data[tuple(tag)].append(
                     [value[all_variables.index(i)] for i in node.free] + [value[all_variables.index(node.dependent)]]
@@ -833,14 +840,14 @@ class Interpreter(object):
             fig = plt.figure()
             ax = Axes3D(fig)
         for tag in plot_data:
-            xs = [i[:-1] for i in plot_data[tag]]
-            y = [i[-1] for i in plot_data[tag]]
-            if len(xs) > 0:
+            xs = np.asarray([i[:-1] for i in plot_data[tag]])
+            y = np.asarray([i[-1] for i in plot_data[tag]])
+            if len(xs) > 0 and not all(np.isnan(y)):
                 plotted = True
                 if len(xs[0]) == 1:
                     getattr(ax, node.plot_type)(xs, y, label=tag)
                 else:
-                    getattr(ax, node.plot_type)([i[0] for i in xs], [i[1] for i in xs], y, label=tag)
+                    getattr(ax, node.plot_type)(xs[:, 0], xs[:, 1], y, label=tag)
         if plotted:
             if len(node.free) == 1:
                 ax.set_xlabel(node.free[0])

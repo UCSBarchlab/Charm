@@ -1,5 +1,5 @@
 Charm 
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master)
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/TanyaAdams1/Charm.git/presentation)
 =====
 
 Charm is an interpreted DSL and runtime for writing/managing
