@@ -1,5 +1,5 @@
 Charm 
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master)
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/Charm/master?filepath=introduction.ipynb)
 =====
 
 Charm is an interpreted DSL and runtime for writing/managing
@@ -33,7 +33,7 @@ z3 (v4.6.0 with python binding)
 
 ### Example Usage
 
-Just click the [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master) button above or visit https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master 
+Just click the [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/UCSBarchlab/Charm/master?filepath=introduction.ipynb) button above or visit https://mybinder.org/v2/gh/UCSBarchlab/Charm.git/master 
 
 To start it from command line, change directory to the root of Charm, and install by
 
