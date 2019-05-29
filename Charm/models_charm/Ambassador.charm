@@ -1,0 +1,54 @@
+typedef I+ : int i
+    i > 0
+
+typedef R+ : float r
+    r > 0
+
+define DC:
+    speedup : R+ as S
+    sequential_time : R+ as T_s
+    pipeline_time : R+ as T_p
+
+    S = T_s / T_p
+    
+define sequential:
+    server_performance : R+ as T
+    abd_performance : R+ as E
+    link_bandwidth : R+ as B
+    link_latency : R+ as L
+    data_size : R+ as D
+    sequential_time : R+ as T_s
+
+    T_s = D/E + D/B + D/T + D/B + 2 * L
+
+define comm_dominant: 
+    server_performance : R+ as T
+    abd_performance : R+ as E
+    link_bandwidth : R+ as B
+    link_latency : R+ as L
+    data_size : R+ as D
+    num_abds : I+ as N
+    pipeline_time : R+ as T_p
+
+    T_p = D/E + 2 * N * (D/B + L)
+    
+define compt_dominant: 
+    server_performance : R+ as T
+    abd_performance : R+ as E
+    link_bandwidth : R+ as B
+    link_latency : R+ as L
+    data_size : R+ as D
+    num_abds : I+ as N
+    pipeline_time : R+ as T_p
+
+    T_p = D/E + 2 * N * (D/B + L) + Max(0, D/T - (N-1) * (D/B + L))
+
+given DC, sequential, comm_dominant 
+assume abd_performance = 14
+assume server_performance = 5 * abd_performance
+assume link_bandwidth = 50
+assume link_latency = 0.001
+assume data_size = 1
+assume num_abds = range(1, 10)
+explore speedup
+plot speedup against num_abds as scatter

@@ -393,7 +393,7 @@ class SolveNode(Node):
 class PlotNode(Node):
 
     def __init__(self, toks):
-        super().__init__()
+        super(PlotNode, self).__init__()
         self.toks = toks
         self.parse()
 

@@ -33,7 +33,7 @@ define hill_marty:
     
     t_s = (1 - f + c * N_total) / p_s
     t_p = f / p_p
-    p_s = max(P[i] | DN[i] > 0)
+    p_s = Max(P[i] | DN[i] > 0)
     p_p = Sum(DN[i] * P[i], (i, 0, N_types))
     N_total = Sum(DN[i], (i, 0, N_types))
     A_total >= Sum(A[i] * DN[i], (i, 0, N_types))

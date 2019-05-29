@@ -593,8 +593,8 @@ class Interpreter(object):
             else:
                 val = eval(v)
             # Has to change range into list, otherwise fail for sympy. For example, range(1,50)**2 won't work
-            if isinstance(val, range):
-                val = list(val)
+            #if isinstance(val, range):
+            #    val = list(val)
 
             if self.v2l[k].lvector:
                 assert self.type_check(k, val), \
@@ -803,7 +803,7 @@ class Interpreter(object):
         self.values = iter_vals
         self.flat_variables = flat_iter_vars
 
-    def __plot(self, node: PlotNode):
+    def __plot(self, node):
         self.process_callback('plotting')
         if node.dependent not in self.targets:
             logging.error("Var {} not in explored targets, cannot be plotted".format(node.dependent))
