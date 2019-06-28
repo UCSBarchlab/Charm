@@ -226,6 +226,7 @@ class Interpreter(object):
         def do_generation(cur, do_solve=False):
             assert isinstance(cur.val, Relation)
             syms = {}
+            # print cur.dump()
             for name in cur.val.names:
                 syms.update(SympyHelper.initSyms(name,
                                                  self.v2v[getBaseName(name)].vector and cur.val.deferred))
@@ -360,8 +361,9 @@ class Interpreter(object):
                 self.v2n[v].addEdge(edge)
                 self.graph.addEdge(edge)
             self.graph.addNode(con)
-        self.graph.draw('Before_clone')
+        self.graph.draw('before_clone')
         self.nameClone()
+        self.graph.draw('after_clone')
 
     def cloneNode(self, cur, exts):
         """ Create cloned nodes of cur with exts. Add them to graph.

@@ -368,7 +368,7 @@ class Graph(object):
                 pass
 
             if set(n.proped.keys()) < set(n.ordered_given) or not n.func(**(n.proped)):
-                logging.debug('VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped))
+                logging.log(logging.ERROR, 'VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped))
                 return False
         return True
 
@@ -414,3 +414,4 @@ class Graph(object):
         nx.draw_networkx_labels(G, pos, labels, font_size=8)
         plt.axis('off')
         plt.savefig(path, dpi=200) if not show else plt.show()
+        logging.info('Drawing saved to {}'.format(path))

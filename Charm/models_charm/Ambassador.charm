@@ -31,6 +31,7 @@ define comm_dominant:
     pipeline_time : R+ as T_p
 
     T_p = D/E + 2 * N * (D/B + L)
+    D/B + L >= D/T
     
 define compt_dominant: 
     server_performance : R+ as T
@@ -41,14 +42,15 @@ define compt_dominant:
     num_abds : I+ as N
     pipeline_time : R+ as T_p
 
-    T_p = D/E + 2 * N * (D/B + L) + Max(0, D/T - (N-1) * (D/B + L))
+    T_p = D/E + 2 * N * (D/B + L) + Max(0, D/T - (N - 1) * (D/B + L))
+    D/B + L < D/T
 
 given DC, sequential, comm_dominant 
 assume abd_performance = 14
 assume server_performance = 5 * abd_performance
 assume link_bandwidth = 50
 assume link_latency = 0.001
-assume data_size = 1
-assume num_abds = range(1, 10)
+assume data_size = 64
+assume num_abds = [2, 3, 4, 5, 6, 7 ,8 ,9 ,10, 16, 32, 64]
 explore speedup
 plot speedup against num_abds as scatter

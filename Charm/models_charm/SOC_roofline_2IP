@@ -1,0 +1,58 @@
+#https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8675198&tag=1
+
+typedef R+ : float r
+    r > 0
+    
+typedef I+ : int i
+    i > 0
+
+typedef Fraction : float r
+    r > 0
+    r < 1
+
+#define SOC:
+#    total_data_capacity : R+ as D_total
+#    total_bandwidth : R+ as B_total
+#    num_IPs : I+ as N
+#    D[] : R+
+#    D_total = Sum(D[i], (i, 0, N))
+#    T[] : R+
+#    max_IP_execution_time : R+ as T_ip
+#    T_ip = Max(T[i])
+#    attainable_performance : R+ as P_att
+#    P_att = 1 / Max(T_ip, D_total / B_total)
+
+define SOC:
+    total_data_capacity : R+ as D_total
+    total_bandwidth : R+ as B_total
+    execution_time.0 : R+ as T_0
+    execution_time.1 : R+ as T_1
+    data_capacity.0 : R+ as D_0
+    data_capacity.1 : R+ as D_1
+    D_total = D_0 + D_1
+    attainable_performance : R+ as P_att
+    P_att = 1 / Max(D_total / B_total, T_0, T_1)
+    
+define IP:
+    peak_computation : R+ as P_peak
+    peak_bandwidth : R+ as B_peak
+    work_fraction : Fraction as f
+    operation_intensity : R+ as I
+    peak_performance : R+ as C
+    C = f / P_peak
+    data_capacity : R+ as D
+    D = f / I
+    execution_time : R+ as T
+    T = Max(D / B_peak, C)
+
+given SOC, IP
+assume peak_computation.0 = 40
+assume peak_computation.1 = 5 * peak_computation.0
+assume peak_bandwidth.0 = 6
+assume peak_bandwidth.1 = 15
+assume operation_intensity.0 = 8
+assume operation_intensity.1 = 0.1
+assume work_fraction.0 = 0.25
+assume work_fraction.1 = 1 - work_fraction.0
+assume total_bandwidth = 10
+explore attainable_performance
