@@ -12,11 +12,12 @@ from sympy import simplify
 from sympy.parsing.sympy_parser import _token_splittable
 from sympy.utilities.lambdify import lambdify, lambdastr
 
-from Charm.base.helpers import *
+from Charm.base.helpers import SympyHelper
 from Charm.models import Dummy
 from .graph import *
 from .smt_wrapper import SMTInstance
-
+from Charm.models.distributions import Gauss
+# from Charm.models.math_models import *
 
 def hasExtName(name):
     # A valid extended variable name can only have one dot extension.
@@ -593,6 +594,7 @@ class Interpreter(object):
             if self.v2l[k].path:
                 val = self.read_list_from_file(self.v2l[k].path)
             else:
+                print(v)
                 val = eval(v)
             # Has to change range into list, otherwise fail for sympy. For example, range(1,50)**2 won't work
             #if isinstance(val, range):

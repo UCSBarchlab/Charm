@@ -2,7 +2,7 @@
 import warnings
 
 from pyparsing import *
-
+import re as standardre
 from .interpreter import *
 
 ParserElement.setDefaultWhitespaceChars(' ')
@@ -24,8 +24,8 @@ class Program:
         importStmt
         plotBlock
         '''.split()
-        COND_EQ = re.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
-        NAME_EXT = re.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
+        COND_EQ = standardre.compile(r',\s*(\w+)\s*=\s*(\w+)\s*\)')
+        NAME_EXT = standardre.compile(r'(?![\d.+])([\w]+)\.([\w.]+)')
         # Convert '=' to Eq in piecewise function, otherwise sympy cannot parse correctly.
         source = COND_EQ.sub(lambda p: ', Eq(' + p.group(1) + ', ' + p.group(2) + '))', source)
         # Convert '.' expresion to custom name clone extension

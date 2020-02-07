@@ -1,7 +1,7 @@
 import functools
 from collections import defaultdict
 
-from mcerp import *
+from mcerp3 import *
 
 from Charm.models import Distribution
 

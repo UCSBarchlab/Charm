@@ -1,5 +1,5 @@
 import logging
-import re
+import re as standardre
 from random import uniform
 
 from pint import UnitRegistry, DimensionalityError
@@ -7,7 +7,7 @@ from sympy.parsing.sympy_parser import parse_expr, auto_symbol, convert_equals_s
 from sympy.solvers import solve
 
 # A valid variable name consists alphanums and dot (excluding leading nums and dots).
-VAR_NAME = re.compile(r'(?![\d.+])[\w.]+')
+VAR_NAME = standardre.compile(r'(?![\d.+])[\w.]+')
 
 ureg = UnitRegistry()
 
@@ -449,10 +449,10 @@ class Relation(Node):
 
         for t in toks:
             if t in self.alias:
-                self.toks.append('( {} * {} )'.format(a2n[t], calc_rate(n2u[a2n[t]])))
+                self.toks.append('{} * {}'.format(calc_rate(n2u[a2n[t]]), a2n[t]))
             else:
                 if t in self.names:
-                    self.toks.append('( {} * {} )'.format(t, calc_rate(n2u[t])))
+                    self.toks.append('{} * {}'.format(calc_rate(n2u[t]), t))
                 else:
                     self.toks.append(t)
         self.str = ''.join(self.toks)
@@ -463,6 +463,7 @@ class Relation(Node):
             elif name in self.names:
                 unit_expression = unit_expression.replace(' ' + name + ' ',
                                                           ' ' + str(n2u[name].units) + '*{} '.format(uniform(1, 10)))
+                # print(unit_expression)
         unit_expression = unit_expression.replace('=', '-')
         # TODO: disabled to bypass unit checking for express with indexes.
         #try:

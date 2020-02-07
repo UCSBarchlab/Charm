@@ -1,12 +1,12 @@
 import logging
 
-import mcerp as mcp
+import mcerp3 as mcp
 import numpy as np
-from mcerp import *
+from mcerp3 import *
 from sympy import *
 
-from Charm.models import Distribution
-from Charm.models import UncertaintyModel
+from Charm.models import distributions
+from Charm.models import uncertainty_models
 
 
 def DPRINT(arg):
