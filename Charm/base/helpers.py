@@ -93,7 +93,6 @@ class SympyHelper(object):
 
         expr_list = []
         for expr in exprs:
-            print(expr)
             parsed_expr = parse_expr(expr, local_dict=syms,
                     transformations=(convert_equals_signs, auto_symbol))
             expr_list.append(parsed_expr)

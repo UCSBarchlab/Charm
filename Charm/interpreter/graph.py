@@ -367,9 +367,9 @@ class Graph(object):
                     n.proped, n.func(**n.proped)))
                 pass
 
-            if set(n.proped.keys()) < set(n.ordered_given) or not n.func(**(n.proped)):
-                logging.log(logging.ERROR, 'VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped))
-                return False
+            # if set(n.proped.keys()) < set(n.ordered_given) or not n.func(**(n.proped)):
+            #     logging.log(logging.ERROR, 'VIOLATION: [{}] on:\n\t{}'.format(n.val.str, n.proped))
+            #     return False
         return True
 
     def check(self):

@@ -1,11 +1,16 @@
 import copy
 import logging
 import mcerp3 as mcerp
+from mcerp3 import UncertainVariable
 import numpy as np
 import scipy.stats as ss
 from Charm.utils.boxcox import BoxCox
 from Charm.utils.kde import Transformations
 
+def f(self):
+    return hash(self.rv)
+
+UncertainVariable.__hash__ = f
 
 def Dummy():
     return Distribution.GetDummy()
